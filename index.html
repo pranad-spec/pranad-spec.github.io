@@ -356,6 +356,11 @@ html.pt-on .pname span{opacity:0}
 .snd[aria-pressed="false"] .x{opacity:1}
 .snd .x{opacity:0;transition:opacity .3s}
 
+/* no blue flash or text selection when tapping on phones */
+*{-webkit-tap-highlight-color:transparent}
+canvas,button,.cans3d,.cans,.film,.stage,.flypin,.cam3d,.pname,.hero,.phone,.grid,.nav{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+canvas{outline:none}
+
 /* viewer */
 .lb{position:fixed;inset:0;z-index:80;background:#030303;display:none;grid-template-rows:auto 1fr auto;padding:12px}
 .lb.open{display:grid}
