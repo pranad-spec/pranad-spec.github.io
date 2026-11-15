@@ -420,25 +420,6 @@ html.pt-on .pname span{opacity:0}
     </div>
   </section>
 
-  <section id="week" style="padding-top:0">
-    <div class="wrap potw">
-      <button class="pic rv" type="button" id="potwPic" data-slug="n15" aria-label="Open this photo full screen"><img src="p/n15.jpg" width="1050" height="1400" loading="lazy" alt="A thin crescent moon against a dark sky"></button>
-      <div>
-        <p class="mono rv" style="margin:0">Photo of the week</p>
-        <h3 class="rv">Cres<i style="font-style:italic">cent</i></h3>
-        <dl class="spec rv">
-          <div><dt>Camera</dt><dd>Coolpix B700</dd></div>
-          <div><dt>Zoom</dt><dd>1440 mm</dd></div>
-          <div><dt>Aperture</dt><dd>f/6.5</dd></div>
-          <div><dt>Shutter</dt><dd>1/125 s</dd></div>
-          <div><dt>ISO</dt><dd>800</dd></div>
-          <div><dt>Roll</dt><dd>Sea and sky</dd></div>
-        </dl>
-        <button class="pill chrome lg rv" type="button" id="potwOpen">Open full screen</button>
-      </div>
-    </div>
-  </section>
-
   <section class="reel" id="reel">
     <div class="ghost" data-speed="-.18" aria-hidden="true">spin spin spin</div>
     <div class="wrap head">
@@ -1111,8 +1092,7 @@ function applyF(){var n=0;shots.forEach(function(x){x.hidden=!((fcat==='all'||x.
 [].forEach.call(document.querySelectorAll('.filters'),function(g){var cs=[].slice.call(g.querySelectorAll('.chip'));
   cs.forEach(function(c){c.onclick=function(){cs.forEach(function(x){x.setAttribute('aria-pressed',x===c?'true':'false')});
     if(c.dataset.f)fcat=c.dataset.f;else fcam=c.dataset.c;applyF()}})});
-(function(){var open=function(){var t=shots.filter(function(x){return x.dataset.slug==='n15'})[0];if(t)lbOpen(t,$('potwOpen'),shots.slice())};
-  $('potwPic').onclick=open;$('potwOpen').onclick=open})();
+
 if(fine&&!reduce){shots.forEach(function(s){
   s.addEventListener('pointermove',function(e){
     var r=s.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;
