@@ -486,13 +486,6 @@ canvas{outline:none}
     </div>
   </section>
 
-  <section id="vault">
-    <div class="flypin" id="vaultpin" data-cursor="VIEW">
-      <canvas aria-hidden="true"></canvas>
-      <p class="mono" id="vaulthint">Scroll to open the vault</p>
-    </div>
-  </section>
-
   <section id="sheet">
     <div class="ghost" data-speed="-.14" aria-hidden="true">archive archive</div>
     <div class="wrap">
@@ -993,76 +986,6 @@ function studio(R,scene){var c=document.createElement('canvas');c.width=1024;c.h
     items.forEach(function(m){var d=cz-m.position.z,u=m.userData;m.material.opacity=nar?Math.max(0,Math.min(1,(d-1.5)/1.3)):Math.max(0,Math.min(1,(d-.7)/1.8));m.visible=d>.5&&d<21;
       m.rotation.y=u.ry*(nar?1:(1+Math.max(0,1-d/5)*.5))});
     R.render(scene,cam)})();
-})();
-
-/* ---------- the vault in front of the archive: door opens and the photos burst out ---------- */
-(function(){
-  var sec=$('vault'),pin=$('vaultpin');if(!window.THREE||!pin||shots.length<40)return;var cv=pin.querySelector('canvas'),R=mkR(cv,true);if(!R)return;
-  document.documentElement.classList.add('vault-on');
-  var scene=new THREE.Scene();scene.fog=new THREE.Fog(0x000000,7,30);var cam=new THREE.PerspectiveCamera(50,1,.1,80);studio(R,scene);
-  var S=function(c,m,r){return new THREE.MeshStandardMaterial({color:c,metalness:m,roughness:r})};
-  var wallM=S(0x060607,.7,.62),chrome=S(0xffffff,1,.12),steel=S(0x8b929c,1,.3),dark=S(0x15171a,1,.4);
-  function rnd(i){var x=Math.sin(i*127.1+3.3)*43758.5453;return x-Math.floor(x)}
-  var OR=2;
-  /* wall with a round opening */
-  var ws=new THREE.Shape();ws.moveTo(-30,-16);ws.lineTo(30,-16);ws.lineTo(30,16);ws.lineTo(-30,16);ws.lineTo(-30,-16);var hole=new THREE.Path();hole.absarc(0,0,OR,0,Math.PI*2,true);ws.holes.push(hole);
-  wallM.envMapIntensity=.22;var wall=new THREE.Mesh(new THREE.ExtrudeGeometry(ws,{depth:.5,bevelEnabled:false,curveSegments:64}),wallM);wall.position.z=-.5;scene.add(wall);
-  for(var q=-4;q<=4;q++){if(q===0)continue;var sm=new THREE.Mesh(new THREE.BoxGeometry(.04,32,.02),dark);sm.position.set(q*3.4,0,.01);scene.add(sm)}
-  var fr=new THREE.Mesh(new THREE.TorusGeometry(OR+.1,.17,20,96),chrome);fr.position.z=.05;scene.add(fr);
-  [.5,.8,1.1].forEach(function(o,k){var t=new THREE.Mesh(new THREE.TorusGeometry(OR+o,.035,10,96),steel);t.position.z=.03;scene.add(t)});
-  var tun=new THREE.Mesh(new THREE.CylinderGeometry(OR,OR,.5,64,1,true),S(0xbfc5cd,1,.25));tun.material.side=THREE.BackSide;tun.material.color.set(0x55595f);tun.rotation.x=Math.PI/2;tun.position.z=-.25;scene.add(tun);
-  /* the door, hinged on the right */
-  var hinge=new THREE.Group();hinge.position.set(OR+.55,0,.3);scene.add(hinge);
-  var door=new THREE.Group();door.position.x=-(OR+.55);hinge.add(door);
-  function cz(r1,r2,h,m,z,seg){var o=new THREE.Mesh(new THREE.CylinderGeometry(r1,r2,h,seg||96),m);o.rotation.x=Math.PI/2;o.position.z=z;return o}
-  door.add(cz(OR+.22,OR+.22,.5,steel,0));door.add(cz(OR+.02,OR+.1,.16,chrome,.3));door.add(cz(OR-.35,OR-.3,.1,dark,.4));door.add(cz(OR-.25,OR-.25,.4,steel,-.4));
-  [1.45,1.15].forEach(function(r){var t=new THREE.Mesh(new THREE.TorusGeometry(r,.05,12,96),chrome);t.position.z=.46;door.add(t)});
-  var bolts=[];for(var b=0;b<12;b++){var a=b/12*Math.PI*2,bo=new THREE.Mesh(new THREE.CylinderGeometry(.09,.09,.5,20),chrome);bo.rotation.z=a-Math.PI/2;bo.userData.a=a;bo.position.z=-.3;door.add(bo);bolts.push(bo)}
-  for(b=0;b<16;b++){a=b/16*Math.PI*2;var rv=cz(.07,.07,.08,chrome,.36,16);rv.position.x=Math.cos(a)*(OR-.05);rv.position.y=Math.sin(a)*(OR-.05);door.add(rv)}
-  var wheel=new THREE.Group();wheel.position.z=.62;door.add(wheel);
-  wheel.add(new THREE.Mesh(new THREE.TorusGeometry(.82,.075,16,72),chrome));wheel.add(cz(.2,.2,.3,chrome,0));wheel.add(cz(.3,.3,.1,steel,-.12));
-  for(b=0;b<8;b++){a=b/8*Math.PI*2;var sp=new THREE.Mesh(new THREE.CylinderGeometry(.04,.04,.82,12),chrome);sp.rotation.z=a;sp.position.set(-Math.sin(a)*.41,Math.cos(a)*.41,0);wheel.add(sp);
-    var kn=new THREE.Mesh(new THREE.SphereGeometry(.085,16,12),chrome);kn.position.set(-Math.sin(a)*.95,Math.cos(a)*.95,0);wheel.add(kn)}
-  [1.1,-1.1].forEach(function(y){var h=new THREE.Mesh(new THREE.CylinderGeometry(.2,.2,.8,32),chrome);h.position.set(OR+.55,y,.3);scene.add(h);var pl=new THREE.Mesh(new THREE.BoxGeometry(.7,.6,.1),steel);pl.position.set(OR+.95,y,.06);scene.add(pl)});
-  /* light pouring out of the vault */
-  var gc=document.createElement('canvas');gc.width=gc.height=256;var gx=gc.getContext('2d'),gg=gx.createRadialGradient(128,128,0,128,128,128);gg.addColorStop(0,'rgba(255,255,255,1)');gg.addColorStop(.35,'rgba(210,225,255,.55)');gg.addColorStop(1,'rgba(180,200,255,0)');gx.fillStyle=gg;gx.fillRect(0,0,256,256);
-  var glowM=new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(gc),transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending,fog:false,toneMapped:false});
-  var glow=new THREE.Mesh(new THREE.PlaneGeometry(9,9),glowM);glow.position.z=-.8;scene.add(glow);
-  var lamp=new THREE.PointLight(0xdfe8ff,0,14);lamp.position.set(0,0,1.2);scene.add(lamp);
-  /* photos: a burst set that explodes out, and a tunnel set inside */
-  var ld=new THREE.TextureLoader(),GAP=3.1,items=[],burst=[],all=[],loaded=false;
-  function plane(s,i){var im=s.querySelector('img'),a=(+im.getAttribute('width'))/(+im.getAttribute('height')),h=a<1?2.7:2.0,w=h*a;
-    var m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({color:0x222222,transparent:true,toneMapped:false,side:THREE.DoubleSide}));m.userData.s=s;m.userData.w=w;scene.add(m);all.push(m);return m}
-  var NB=innerWidth<700?46:84;shots.filter(function(s,i){return i%4!==1}).slice(0,NB).forEach(function(s,i){var m=plane(s,i+100),a=rnd(i+7)*Math.PI*2,r=1.4+rnd(i+13)*7.2;
-    m.userData.ex=Math.cos(a)*r;m.userData.ey=Math.sin(a)*r*.62;m.userData.ez=.6+rnd(i+21)*6.2;m.userData.rz=(rnd(i+31)-.5)*.9;m.userData.ry=(rnd(i+41)-.5)*.8;m.userData.d=rnd(i+3)*.4;burst.push(m)});
-  function load(){if(loaded)return;loaded=true;all.forEach(function(m){ld.load(m.userData.s.querySelector('img').getAttribute('src'),function(t){t.encoding=THREE.sRGBEncoding;m.material.map=t;m.material.color.set(0xffffff);m.material.needsUpdate=true})})}
-  var W=0,H=0,nar=false,z0=8;
-  function layout(){W=pin.clientWidth;H=pin.clientHeight;if(!W||!H)return;R.setSize(W,H,false);cam.aspect=W/H;cam.updateProjectionMatrix();nar=cam.aspect<1;z0=nar?Math.min(15,3.3/(Math.tan(25*Math.PI/180)*cam.aspect)):8;}
-  layout();addEventListener('resize',layout);
-  var vis=false,mx=0,my=0,cz2=8,ray=new THREE.Raycaster(),v2=new THREE.Vector2(),dn=null,bm=0,bv=0,was=0,shake=0,hint=$('vaulthint');
-  new IntersectionObserver(function(e){vis=e[0].isIntersecting;if(vis)load()},{rootMargin:'700px'}).observe(sec);
-  pin.addEventListener('pointermove',function(e){var r=pin.getBoundingClientRect();mx=(e.clientX-r.left)/r.width*2-1;my=(e.clientY-r.top)/r.height*2-1},{passive:true});
-  cv.addEventListener('pointerdown',function(e){dn=[e.clientX,e.clientY]});
-  cv.addEventListener('pointerup',function(e){if(!dn||Math.abs(e.clientX-dn[0])+Math.abs(e.clientY-dn[1])>8)return;var r=cv.getBoundingClientRect();v2.set((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height*2-1));ray.setFromCamera(v2,cam);
-    var h=ray.intersectObjects(all).filter(function(x){return x.object.visible&&x.object.material.opacity>.3})[0];if(h){buzz(12);lbOpen(h.object.userData.s,null)}});
-  function ease(x){x=Math.max(0,Math.min(1,x));return x*x*(3-2*x)}
-  var t0=performance.now();
-  (function loop(now){requestAnimationFrame(loop);if(!vis||document.hidden)return;var t=(now-t0)/1000,r=sec.getBoundingClientRect(),p=Math.max(0,Math.min(1,-r.top/(r.height-innerHeight)));
-    var un=ease(p/.09),op=ease((p-.09)/.17),tgt=p>.24?1:0;
-    if(reduce){bm=tgt}else{bv+=(tgt-bm)*.085;bv*=.8;bm+=bv}
-    if(tgt&&!was){shake=1;buzz([40,30,70]);if(typeof boomSound==='function')boomSound()}was=tgt;shake*=.9;
-    wheel.rotation.z=-un*5.5-op*1.2;bolts.forEach(function(bo){var rr=OR+.2-un*.42;bo.position.x=Math.cos(bo.userData.a)*rr;bo.position.y=Math.sin(bo.userData.a)*rr});
-    hinge.rotation.y=op*2.05;
-    hint.textContent=p<.09?'Scroll to open the vault':p<.26?'Keep going':'Tap a photo to open it. The archive is below.';
-    var fq=ease((p-.42)/.58),tz=z0-fq*(z0-.6);cz2+=(tz-cz2)*(reduce?1:.09);
-    var sx=(Math.random()-.5)*shake*.25,sy=(Math.random()-.5)*shake*.25,k=nar?.5:1;
-    cam.position.set(mx*.5*k+sx,-my*.3+sy,cz2);cam.rotation.set(-my*.03,-mx*.05,0);
-    burst.forEach(function(m,i){var u=m.userData,e=Math.max(0,Math.min(1.25,(bm-u.d)/(1-u.d))),kx=nar?.42:1;
-      m.position.set(u.ex*kx*e+Math.sin(t*.5+i)*.08*e,u.ey*(nar?1.5:1)*e+Math.cos(t*.4+i*1.7)*.1*e,-1.2+(u.ez+1.2)*e);
-      m.rotation.set((1-Math.min(1,e))*4,u.ry*e+(1-Math.min(1,e))*6,u.rz*e+(1-Math.min(1,e))*9);m.scale.setScalar((nar?.42:.66)*Math.max(.001,Math.min(1.1,e)));
-      var d=cz2-m.position.z;m.visible=e>.02&&d>.5;m.material.opacity=Math.max(0,Math.min(1,(d-.8)/2))});
-    glowM.opacity=op*.55*(1-fq*.85);glow.scale.setScalar(.55+op*.35+bm*.2);lamp.intensity=op*2.2*(1-fq*.7);
-    R.render(scene,cam)})(t0);
 })();
 
 /* ---------- the name, made of light ---------- */
