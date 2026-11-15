@@ -316,7 +316,7 @@ html.cam-on .cam3d{display:block}
 html.cam-on .camnote{display:block}
 
 /* ---- fly-through ---- */
-#fly{height:340vh;padding:0;display:none}
+#fly{height:420vh;padding:0;display:none}
 #vault{height:330vh;padding:0;display:none}
 html.vault-on #vault{display:block}
 html.fly-on #fly{display:block}
@@ -970,14 +970,17 @@ function studio(R,scene){var c=document.createElement('canvas');c.width=1024;c.h
 (function(){
   var sec=$('fly'),pin=$('flypin');if(!window.THREE||!pin||shots.length<20)return;var cv=pin.querySelector('canvas'),R=mkR(cv,false);if(!R)return;
   document.documentElement.classList.add('fly-on');
-  var scene=new THREE.Scene();scene.fog=new THREE.Fog(0x000000,5,24);var cam=new THREE.PerspectiveCamera(50,1,.1,60);
-  var pick=shots.filter(function(s,i){return i%4===1}).slice(0,28),GAP=2.1,items=[],loaded=false,ld=new THREE.TextureLoader();
+  var scene=new THREE.Scene();scene.fog=new THREE.Fog(0x000000,4,19);var cam=new THREE.PerspectiveCamera(50,1,.1,60);
+  var pick=shots.filter(function(s,i){return i%4===1}).slice(0,28),GAP=3.3,items=[],loaded=false,ld=new THREE.TextureLoader();
   function rnd(i){var x=Math.sin(i*127.1+3.3)*43758.5453;return x-Math.floor(x)}
   pick.forEach(function(s,i){var im=s.querySelector('img'),a=(+im.getAttribute('width'))/(+im.getAttribute('height')),h=a<1?2.7:2.0,w=h*a;
     var m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({color:0x222222,transparent:true}));
     var side=i%2?1:-1;m.userData={s:s,side:side,bx:side*(.62+rnd(i)*.85),by:(rnd(i+50)-.5)*1.5};m.position.z=-i*GAP;m.rotation.y=-side*.22;scene.add(m);items.push(m)});
   function load(){if(loaded)return;loaded=true;items.forEach(function(m){ld.load(m.userData.s.querySelector('img').getAttribute('src'),function(t){t.encoding=THREE.sRGBEncoding;m.material.map=t;m.material.color.set(0xffffff);m.material.needsUpdate=true})})}
-  var W=0,H=0,k=1;function layout(){W=pin.clientWidth;H=pin.clientHeight;if(!W||!H)return;R.setSize(W,H,false);cam.aspect=W/H;cam.updateProjectionMatrix();var nar=cam.aspect<1;k=nar?.42:1;items.forEach(function(m,i){var w=m.geometry.parameters.width,sc=nar?Math.min(1,1.3/w):1;m.scale.setScalar(sc);m.position.x=nar?m.userData.side*(.16+rnd(i+9)*.26):m.userData.bx;m.position.y=m.userData.by*(nar?1.25:1)})}
+  var W=0,H=0,k=1,nar=false;function layout(){W=pin.clientWidth;H=pin.clientHeight;if(!W||!H)return;R.setSize(W,H,false);cam.aspect=W/H;cam.updateProjectionMatrix();nar=cam.aspect<1;k=nar?.42:1;
+    items.forEach(function(m,i){var w=m.geometry.parameters.width,h=m.geometry.parameters.height,u=m.userData;
+      if(nar){var sc=Math.min(1.25/w,2.3/h);m.scale.setScalar(sc);m.position.x=u.side*.14;m.position.y=(rnd(i+50)-.5)*.5;u.ry=-u.side*.1}
+      else{var sc2=Math.min(3.1/w,2.9/h);m.scale.setScalar(sc2);m.position.x=u.side*(1.75+w*sc2*.18);m.position.y=(rnd(i+50)-.5)*.35;u.ry=-u.side*.5}})}
   layout();addEventListener('resize',layout);
   var vis=false,mx=0,my=0,cz=6,ray=new THREE.Raycaster(),v2=new THREE.Vector2(),dn=null;
   new IntersectionObserver(function(e){vis=e[0].isIntersecting;if(vis)load()},{rootMargin:'600px'}).observe(sec);
@@ -987,7 +990,8 @@ function studio(R,scene){var c=document.createElement('canvas');c.width=1024;c.h
     var h=ray.intersectObjects(items).filter(function(x){return x.object.material.opacity>.3})[0];if(h){buzz(12);lbOpen(h.object.userData.s,null)}});
   (function loop(){requestAnimationFrame(loop);if(!vis||document.hidden)return;var r=sec.getBoundingClientRect(),p=Math.max(0,Math.min(1,-r.top/(r.height-innerHeight)));
     var tz=6-p*((items.length-1)*GAP+3);cz+=(tz-cz)*(reduce?1:.09);cam.position.set(mx*.5*k,-my*.3,cz);cam.rotation.set(-my*.03,-mx*.05,0);
-    items.forEach(function(m){var d=cz-m.position.z;m.material.opacity=Math.max(0,Math.min(1,(d-.9)/2.2));m.visible=d>.6&&d<26;m.rotation.y=-m.userData.side*(.22+Math.max(0,1-d/7)*.25)});
+    items.forEach(function(m){var d=cz-m.position.z,u=m.userData;m.material.opacity=nar?Math.max(0,Math.min(1,(d-1.5)/1.3)):Math.max(0,Math.min(1,(d-.7)/1.8));m.visible=d>.5&&d<21;
+      m.rotation.y=u.ry*(nar?1:(1+Math.max(0,1-d/5)*.5))});
     R.render(scene,cam)})();
 })();
 
