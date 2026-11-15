@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pranad</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&family=Manrope:wght@400..700&display=swap" rel="stylesheet">
+<script>document.documentElement.className="js"</script>
+<style>
+/* Layout idea: a cinema screen. Full-bleed water you can touch, a ring of frames you spin by hand, a contact sheet that tilts under the pointer, and a phone you can operate. One world, always dark. */
+:root{
+  color-scheme:dark;
+  --bg:#060606;
+  --fg:#f3efe8;
+  --dim:#958f86;
+  --line:rgba(255,255,255,.13);
+  --glass:rgba(255,255,255,.07);
+  --ember:#ff5a2a;      /* accent: the sun in the sunset frames */
+  --gold:#ffc766;       /* second accent: light on water */
+  --serif:"Instrument Serif","Times New Roman",serif;
+  --sans:"Manrope",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  --gutter:clamp(16px,4vw,56px);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+img{max-width:100%;display:block}
+a{color:inherit}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--gold);outline-offset:3px;border-radius:6px}
+.mono{font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+.wrap{padding-inline:var(--gutter);max-width:1400px;margin-inline:auto}
+
+/* film grain over everything */
+.grain{position:fixed;inset:0;z-index:90;pointer-events:none;opacity:.09;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+/* opening curtain */
+.curtain{position:fixed;inset:0;z-index:100;background:var(--bg);display:grid;place-items:center;pointer-events:none;animation:lift .9s cubic-bezier(.7,0,.2,1) .7s forwards}
+.curtain span{font-family:var(--serif);font-size:clamp(34px,7vw,84px);letter-spacing:-.01em;animation:breathe .7s ease both}
+@keyframes lift{to{transform:translateY(-101%)}}
+@keyframes breathe{from{opacity:0;letter-spacing:.2em}to{opacity:1;letter-spacing:-.01em}}
+
+/* custom cursor (fine pointers only) */
+.cursor{position:fixed;left:0;top:0;z-index:95;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:var(--fg);mix-blend-mode:difference;pointer-events:none;display:none;align-items:center;justify-content:center;transition:width .25s,height .25s,margin .25s,background .25s}
+.cursor b{font:500 10px var(--mono);letter-spacing:.12em;color:#000;opacity:0;transition:opacity .2s}
+.cursor.big{width:76px;height:76px;margin:-38px 0 0 -38px;mix-blend-mode:normal;background:var(--gold)}
+.cursor.big b{opacity:1}
+.cursor.link{width:40px;height:40px;margin:-20px 0 0 -20px}
+@media (hover:hover) and (pointer:fine){.cursor{display:flex}}
+
+/* glass nav */
+.nav{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:60;display:flex;align-items:center;gap:clamp(10px,2.4vw,26px);padding:8px 8px 8px 20px;border-radius:999px;background:rgba(20,20,20,.45);border:1px solid var(--line);backdrop-filter:blur(18px) saturate(1.5);-webkit-backdrop-filter:blur(18px) saturate(1.5);box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 10px 40px rgba(0,0,0,.4);white-space:nowrap;max-width:calc(100vw - 24px)}
+.nav .brand{font-family:var(--serif);font-size:21px;text-decoration:none;line-height:1}
+.nav .brand i{color:var(--gold)}
+.nav a.l{font-size:13.5px;font-weight:600;text-decoration:none;color:#d3cec5}
+.nav a.l:hover{color:#fff}
+.pill{position:relative;overflow:hidden;display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:999px;border:1px solid var(--line);background:var(--glass);font-weight:700;font-size:13.5px;text-decoration:none;cursor:pointer;isolation:isolate;box-shadow:inset 0 1px 0 rgba(255,255,255,.16)}
+.pill::before{content:"";position:absolute;z-index:-1;left:var(--x,50%);top:var(--y,50%);width:0;height:0;border-radius:50%;background:var(--fg);transform:translate(-50%,-50%);transition:width .55s cubic-bezier(.2,.8,.2,1),height .55s cubic-bezier(.2,.8,.2,1)}
+.pill:hover::before{width:420px;height:420px}
+.pill:hover{color:#0a0a0a}
+.pill.hot{background:var(--fg);color:#0a0a0a;border-color:var(--fg)}
+.pill.hot::before{background:var(--ember)}
+.pill.hot:hover{color:#fff}
+.pill.lg{padding:16px 28px;font-size:15.5px}
+@media (max-width:560px){.nav a.l.s{display:none}.nav{padding-left:16px}}
+
+/* hero */
+.hero{position:relative;height:100vh;height:100svh;min-height:540px;max-height:1100px;overflow:hidden;background:#000;touch-action:pan-y}
+.hero img.still,.hero canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.hero canvas{opacity:0;transition:opacity .8s}
+.hero canvas.on{opacity:1}
+.hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.45) 0,transparent 26%,transparent 48%,rgba(0,0,0,.82) 100%);pointer-events:none}
+.hero-ui{position:absolute;z-index:2;inset:auto 0 0 0;padding:0 var(--gutter) clamp(20px,4vw,44px);display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;pointer-events:none}
+h1{font-family:var(--serif);font-weight:400;font-size:clamp(96px,25vw,380px);line-height:.8;letter-spacing:-.035em;margin:10px 0 0;text-shadow:0 4px 60px rgba(0,0,0,.45)}
+h1 i{color:var(--gold)}
+.slide{min-width:210px;padding-bottom:10px}
+.slide .n{font-family:var(--mono);font-size:13px;color:var(--fg)}
+.slide .t{font-family:var(--serif);font-size:26px;line-height:1.15;margin:4px 0 12px}
+.bar{height:2px;background:rgba(255,255,255,.22);overflow:hidden;border-radius:2px}
+.bar i{display:block;height:100%;width:0;background:var(--gold)}
+.hint{position:absolute;z-index:2;right:var(--gutter);top:50%;writing-mode:vertical-rl;transform:translateY(-50%);pointer-events:none}
+
+/* marquee */
+.marq{border-block:1px solid var(--line);overflow:hidden;padding:16px 0;white-space:nowrap}
+.marq div{display:inline-flex;gap:44px;padding-right:44px;animation:slide 30s linear infinite;font-family:var(--serif);font-size:clamp(26px,4vw,48px);line-height:1}
+.marq i{color:var(--dim)}
+.marq span::after{content:"/";margin-left:44px;color:var(--ember);font-style:normal}
+@keyframes slide{to{transform:translateX(-50%)}}
+
+section{padding-block:clamp(56px,9vw,130px);scroll-margin-top:40px}
+.head{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:clamp(24px,4vw,48px)}
+h2{font-family:var(--serif);font-weight:400;font-size:clamp(46px,9vw,128px);line-height:.9;letter-spacing:-.03em;margin:8px 0 0}
+h2 i{color:var(--gold)}
+
+/* the ring */
+.reel{overflow:hidden}
+.stage{position:relative;height:clamp(380px,62vw,640px);perspective:1300px;touch-action:pan-y;cursor:grab;user-select:none;-webkit-user-select:none}
+.stage.drag{cursor:grabbing}
+.ring{position:absolute;left:50%;top:50%;width:0;height:0;transform-style:preserve-3d;will-change:transform}
+.panel{position:absolute;left:calc(var(--pw) / -2);top:calc(var(--ph) / -2);width:var(--pw);height:var(--ph);padding:0;border:0;border-radius:10px;overflow:hidden;background:#111;backface-visibility:hidden;-webkit-backface-visibility:hidden;cursor:inherit;box-shadow:0 30px 80px rgba(0,0,0,.6)}
+.panel img{width:100%;height:100%;object-fit:cover;pointer-events:none;-webkit-user-drag:none}
+.panel::after{content:"";position:absolute;inset:0;background:#000;opacity:var(--shade,0);pointer-events:none}
+.stage{--pw:clamp(150px,22vw,290px);--ph:calc(var(--pw) * 1.5)}
+.ctrl{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:8px}
+.round{width:48px;height:48px;border-radius:50%;border:1px solid var(--line);background:var(--glass);cursor:pointer;font-size:18px;display:inline-flex;align-items:center;justify-content:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.16)}
+
+
+/* contact sheet */
+.filters{display:flex;flex-wrap:wrap;gap:8px}
+.chip{padding:9px 16px;border-radius:999px;border:1px solid var(--line);background:var(--glass);font-size:13.5px;font-weight:600;color:#cfc9bf;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--fg);color:#0a0a0a;border-color:var(--fg)}
+.grid{columns:4 250px;column-gap:14px}
+.shot{position:relative;display:block;width:100%;margin:0 0 14px;padding:0;border:0;border-radius:8px;overflow:hidden;background:#121212;break-inside:avoid;cursor:pointer;text-align:left;transform:perspective(900px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));transition:transform .35s ease;will-change:transform}
+.shot[hidden]{display:none}
+.shot img{width:100%;height:auto}
+.shot::before{content:"";position:absolute;inset:0;z-index:1;background:radial-gradient(420px circle at var(--mx,50%) var(--my,50%),rgba(255,255,255,.28),transparent 55%);opacity:0;transition:opacity .3s;pointer-events:none;mix-blend-mode:soft-light}
+.shot:hover::before{opacity:1}
+.cap{position:absolute;z-index:2;inset:auto 0 0 0;padding:34px 12px 11px;background:linear-gradient(transparent,rgba(0,0,0,.85));font-family:var(--serif);font-size:19px;line-height:1.15;opacity:0;transition:opacity .3s}
+.cap small{display:block;font:500 10.5px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin-top:3px}
+.shot:hover .cap,.shot:focus-visible .cap{opacity:1}
+@media (hover:none){.cap{opacity:1}}
+
+/* app */
+.app{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:clamp(28px,6vw,90px);align-items:center}
+.app p{color:#bdb7ad;max-width:44ch;font-size:17px;margin:22px 0 0}
+.feat{list-style:none;padding:0;margin:28px 0 30px;display:grid;gap:0;max-width:520px}
+.feat li{display:flex;justify-content:space-between;gap:18px;padding:13px 0;border-top:1px solid var(--line);font-size:15px}
+.feat li:last-child{border-bottom:1px solid var(--line)}
+.feat span{color:var(--dim)}
+.soon{display:inline-flex;align-items:center;gap:10px;padding:13px 18px;border:1px dashed rgba(255,255,255,.28);border-radius:999px;font-size:14px;color:#cfc9bf}
+.soon i{width:8px;height:8px;border-radius:50%;background:var(--ember);animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.25}}
+.phone{position:relative;width:min(310px,78vw);aspect-ratio:9/19.3;border-radius:46px;padding:9px;background:linear-gradient(145deg,#3a3a3a,#0d0d0d 40%,#2a2a2a);box-shadow:0 0 0 1px #000,0 50px 120px rgba(0,0,0,.8),0 0 120px rgba(255,120,40,.12);margin-inline:auto;transform:perspective(1200px) rotateY(var(--py,-10deg)) rotateX(var(--px,4deg));transition:transform .3s ease}
+.screen{position:relative;height:100%;border-radius:38px;overflow:hidden;background:#000;display:flex;flex-direction:column}
+.view{position:relative;flex:1;min-height:0;overflow:hidden;margin:10px 0 0;border-radius:26px}
+.view img{width:100%;height:100%;object-fit:cover;transform:scale(var(--z,1));transition:transform .25s ease,filter .5s ease}
+.view .lb1,.view .lb2{position:absolute;left:0;right:0;height:0;background:#000;transition:height .5s ease}
+.view .lb1{top:0}.view .lb2{bottom:0}
+.view.cine .lb1,.view.cine .lb2{height:13%}
+.flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
+.flash.go{animation:fl .35s ease}
+@keyframes fl{0%{opacity:.9}100%{opacity:0}}
+.tag{position:absolute;left:12px;top:12px;padding:5px 10px;border-radius:999px;background:rgba(0,0,0,.45);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--line);font:500 10px var(--mono);letter-spacing:.14em}
+.deck{padding:10px 10px 14px;display:grid;gap:10px}
+.looks{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px}
+.looks::-webkit-scrollbar{display:none}
+.look{flex:none;padding:7px 11px;border-radius:999px;border:1px solid var(--line);background:var(--glass);font:500 10px var(--mono);letter-spacing:.12em;cursor:pointer;color:#bbb;box-shadow:inset 0 1px 0 rgba(255,255,255,.14)}
+.look[aria-pressed="true"]{background:var(--gold);color:#111;border-color:var(--gold)}
+.zoom{display:flex;align-items:center;gap:10px;font:500 10px var(--mono);color:#bbb}
+.zoom input{flex:1;accent-color:var(--gold);height:22px}
+.zoom output{min-width:34px;text-align:right;color:var(--fg)}
+.shutter{justify-self:center;width:58px;height:58px;border-radius:50%;border:3px solid #fff;background:transparent;padding:3px;cursor:pointer}
+.shutter::after{content:"";display:block;width:100%;height:100%;border-radius:50%;background:#fff;transition:transform .12s}
+.shutter:active::after{transform:scale(.82)}
+.note{text-align:center;margin-top:16px}
+
+/* about */
+.about{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:clamp(28px,6vw,90px);align-items:end}
+.say{font-family:var(--serif);font-size:clamp(34px,5.4vw,76px);line-height:1.02;letter-spacing:-.02em;margin:14px 0 0;text-wrap:balance}
+.say i{color:var(--gold)}
+.facts{display:grid;gap:0;margin:0}
+.facts div{display:flex;justify-content:space-between;gap:16px;padding:13px 0;border-top:1px solid var(--line);font-size:15px}
+.facts dt{color:var(--dim)}
+.facts dd{margin:0;text-align:right}
+.end{border-top:1px solid var(--line);text-align:center;padding-block:clamp(56px,9vw,120px) 36px}
+.end a.big{display:inline-block;font-family:var(--serif);font-size:clamp(96px,25vw,380px);line-height:.9;letter-spacing:-.03em;text-decoration:none;background:linear-gradient(90deg,var(--gold),var(--ember),var(--gold));background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:sheen 6s linear infinite}
+@keyframes sheen{to{background-position:-200% 0}}
+.end p{margin:26px 0 0}
+
+/* scroll progress */
+.prog{position:fixed;left:0;top:0;height:2px;width:0;background:linear-gradient(90deg,var(--gold),var(--ember));z-index:96;pointer-events:none}
+
+/* reveal on scroll (only when script runs) */
+html.js .rv{opacity:0;transform:translateY(70px) skewY(3deg);transition:opacity .9s ease,transform 1.1s cubic-bezier(.16,1,.3,1);transition-delay:var(--d,0s)}
+html.js .rv.in{opacity:1;transform:none}
+h1 span{display:inline-block;overflow:hidden;vertical-align:bottom;padding:.08em .06em .1em 0;margin:-.08em -.06em -.1em 0}
+h1 span b{display:inline-block;font-weight:400;animation:up 1.2s cubic-bezier(.16,1,.3,1) 1.25s both}
+h1 span+span b{animation-delay:1.4s}
+@keyframes up{from{transform:translateY(115%) rotate(6deg)}to{transform:none}}
+
+/* ghost words behind sections */
+section{position:relative;overflow-x:clip}
+.ghost{position:absolute;top:8px;left:0;z-index:0;font-family:var(--serif);font-style:italic;font-size:clamp(140px,30vw,460px);line-height:.8;white-space:nowrap;color:transparent;-webkit-text-stroke:1px rgba(255,255,255,.07);pointer-events:none;will-change:transform;user-select:none}
+section>.wrap,section>.stage,section>.ctrl,section>.strips{position:relative;z-index:1}
+
+/* statement that lights up as you scroll */
+.state{padding-block:clamp(70px,12vw,170px)}
+.scrub{font-family:var(--serif);font-size:clamp(38px,7.2vw,112px);line-height:1;letter-spacing:-.025em;margin:0;max-width:16ch}
+.scrub span{opacity:.14;transition:opacity .35s ease,color .35s ease}
+.scrub span.lit{opacity:1}
+.scrub span.lit.g{color:var(--gold);font-style:italic}
+
+/* drifting film strips */
+.strips{display:grid;gap:12px;margin-top:clamp(20px,4vw,48px)}
+.strip{overflow:hidden;height:clamp(150px,21vw,280px)}
+.strip:nth-child(2){height:clamp(120px,16vw,210px)}
+.track{display:flex;gap:12px;height:100%;width:max-content;will-change:transform}
+.tile{flex:none;height:100%;padding:0;border:0;border-radius:8px;overflow:hidden;background:#111;cursor:pointer}
+.tile img{width:100%;height:100%;object-fit:cover;transition:transform .7s cubic-bezier(.16,1,.3,1),filter .5s;filter:saturate(.85) brightness(.82)}
+.tile:hover img,.tile:focus-visible img{transform:scale(1.14);filter:none}
+
+/* the wall */
+.grid{columns:6 190px;column-gap:10px}
+.shot{margin-bottom:10px;border-radius:6px;transition:transform .35s ease,opacity .4s ease}
+.shot img{transition:transform .9s cubic-bezier(.16,1,.3,1),opacity .8s ease,filter .5s}
+html.js .shot:not(.in) img{opacity:0;transform:scale(1.3)}
+.shot.in:hover img,.shot.in:focus-visible img{transform:scale(1.13)}
+@media (hover:hover){.grid:hover .shot{opacity:.38}.grid:hover .shot:hover{opacity:1;z-index:3}}
+.count{font-family:var(--serif);font-size:clamp(46px,9vw,128px);line-height:.9;color:var(--gold);font-style:italic}
+
+/* phone life */
+.floaty{animation:bob 5.5s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(-14px)}}
+.phone{box-shadow:0 0 0 1px #000,0 50px 120px rgba(0,0,0,.8),0 0 140px var(--glow,rgba(255,120,40,.22));transition:transform .3s ease,box-shadow .8s ease}
+.mag{transition:transform .35s cubic-bezier(.16,1,.3,1)}
+
+/* liquid chrome */
+.chrome,.chip[aria-pressed="true"],.round{color:#0b0b0b;border:1px solid rgba(255,255,255,.75);
+  background:linear-gradient(112deg,#fafafa 0%,#8b8f96 14%,#ffffff 27%,#5d6067 41%,#e9ecf1 55%,#787c84 69%,#ffffff 83%,#9a9ea6 100%);
+  background-size:260% 100%;background-position:var(--bx,30%) 0;animation:flow 7s ease-in-out infinite alternate;
+  box-shadow:inset 0 1px 1px rgba(255,255,255,.9),inset 0 -6px 12px rgba(0,0,0,.28),0 8px 26px rgba(0,0,0,.5);text-shadow:0 1px 0 rgba(255,255,255,.55)}
+.chrome::before{display:none}
+.chrome:hover,.round:hover{color:#000;animation-duration:1.6s;filter:brightness(1.1)}
+.pill.chrome{font-weight:800}
+@keyframes flow{to{background-position:100% 0}}
+
+/* camera rolls */
+.can:first-child{margin-left:auto}.can:last-child{margin-right:auto}
+.cans{display:flex;gap:clamp(14px,3vw,38px);padding:26px var(--gutter) 30px;overflow-x:auto;scrollbar-width:none}
+.cans::-webkit-scrollbar{display:none}
+.can{position:relative;flex:none;width:clamp(104px,12.5vw,168px);aspect-ratio:118/178;padding:0;border:0;background:none;cursor:pointer;transition:transform .6s cubic-bezier(.16,1,.3,1);--c:#ffc766}
+.can:hover{transform:translateY(-10px) rotate(-3deg)}
+.can[aria-pressed="true"]{transform:translateY(-16px)}
+.can .cap{position:absolute;left:7%;right:7%;height:10%;border-radius:6px;background:linear-gradient(90deg,#1d1d1f,#9a9da3 14%,#f4f5f7 28%,#6c6f75 48%,#2a2b2e 62%,#c9ccd1 82%,#3a3b3f)}
+.can .cap.t{top:0}.can .cap.b{bottom:0}
+.can .cap.t::before{content:"";position:absolute;left:50%;top:-34%;width:26%;height:44%;transform:translateX(-50%);border-radius:3px 3px 0 0;background:linear-gradient(90deg,#333,#ddd 40%,#666)}
+.can .body{position:absolute;inset:8% 0;border-radius:9px;overflow:hidden;
+  background:linear-gradient(90deg,#141415 0%,#8e9197 10%,#ffffff 24%,#a4a7ad 38%,#3a3b3f 55%,#dfe2e7 76%,#6f7278 90%,#1a1a1c 100%);
+  background-size:220% 100%;animation:flow 6s ease-in-out infinite alternate;box-shadow:0 26px 50px rgba(0,0,0,.7),inset 0 0 0 1px rgba(255,255,255,.25)}
+.can:nth-child(2n) .body{animation-delay:-2s}.can:nth-child(3n) .body{animation-delay:-4s}
+.can .band{position:absolute;left:0;right:0;top:26%;height:48%;background:var(--c);mix-blend-mode:multiply;opacity:.92}
+.can .txt{position:absolute;left:0;right:0;top:26%;height:48%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#0a0a0a;text-shadow:0 1px 0 rgba(255,255,255,.35)}
+.can .txt b{font:400 clamp(17px,2vw,23px)/1 var(--serif);font-style:italic}
+.can .txt i{font:500 9.5px var(--mono);letter-spacing:.14em;font-style:normal}
+.can .body::after{content:"";position:absolute;inset:0;background:radial-gradient(120px circle at var(--mx,30%) var(--my,20%),rgba(255,255,255,.75),transparent 60%);mix-blend-mode:soft-light}
+.can .lip{position:absolute;right:-2px;top:22%;bottom:22%;width:0;background:#17120e repeating-linear-gradient(180deg,transparent 0 6px,rgba(255,255,255,.5) 6px 10px,transparent 10px 16px);background-size:5px 100%;background-repeat:no-repeat;background-position:60% 0;border-radius:0 3px 3px 0;transform:translateX(100%);transition:width .6s cubic-bezier(.16,1,.3,1)}
+.can[aria-pressed="true"] .lip{width:34%}
+.can[aria-pressed="true"] .body{box-shadow:0 26px 60px rgba(0,0,0,.7),0 0 46px color-mix(in srgb,var(--c) 55%,transparent),inset 0 0 0 1px rgba(255,255,255,.4)}
+.film{position:relative;background:#120e0b;padding:22px 0;overflow:hidden;touch-action:pan-y;cursor:grab;user-select:none;-webkit-user-select:none;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)}
+.film::before,.film::after{content:"";position:absolute;left:0;right:0;height:10px;background:repeating-linear-gradient(90deg,transparent 0 9px,rgba(255,255,255,.72) 9px 21px,transparent 21px 30px);border-radius:2px;background-position:var(--fx,0) 0}
+.film::before{top:6px}.film::after{bottom:6px}
+.strip{height:clamp(190px,26vw,340px);display:none}
+.strip:nth-child(2){height:clamp(190px,26vw,340px)}
+.strip.on{display:block;animation:pull .9s cubic-bezier(.16,1,.3,1)}
+@keyframes pull{from{opacity:0;transform:translateX(12%) scaleX(.94)}to{opacity:1;transform:none}}
+.track{gap:8px}
+.tile{border-radius:3px}
+.tile video{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+.tile img{filter:none}
+.rollname{display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding:14px var(--gutter) 0}
+.rollname b{font:400 clamp(24px,3.4vw,44px)/1 var(--serif);font-style:italic;color:var(--gold)}
+.lb-stage video{max-width:100%;max-height:100%;border-radius:4px;display:none}
+
+/* ---- monochrome theme: black, white, silver ---- */
+:root{--gold:#eef1f5;--ember:#a9b1bd}
+h2 i,.say i,.count,.rollname b,.scrub span.lit.g{background:linear-gradient(100deg,#fff 0%,#7c8491 28%,#fff 50%,#858d9a 72%,#fff 100%);background-size:240% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5s linear infinite alternate;padding-right:.06em}
+.prog{background:linear-gradient(90deg,#fff,#8a92a0)}
+.cursor.big{background:#fff}
+.look[aria-pressed="true"]{background:#fff;border-color:#fff}
+.soon i{background:#fff}
+.torch{position:fixed;left:0;top:0;width:680px;height:680px;margin:-340px 0 0 -340px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.075),rgba(255,255,255,.02) 40%,transparent 62%);pointer-events:none;z-index:1;mix-blend-mode:screen;display:none;will-change:transform}
+@media (hover:hover) and (pointer:fine){.torch{display:block}}
+main,footer,.end{position:relative}
+
+/* ---- liquid metal ring buttons ---- */
+.chrome,.round,.chip{position:relative;isolation:isolate;overflow:hidden}
+html.lq-on .chrome,html.lq-on .round,html.lq-on .chip[aria-pressed="true"]{background:#000;animation:none;color:#fff;text-shadow:0 1px 8px rgba(0,0,0,.9);border-color:transparent;
+  box-shadow:0 0 0 1px rgba(255,255,255,.22),0 10px 34px rgba(0,0,0,.65),0 0 26px rgba(255,255,255,.1);transition:box-shadow .4s,transform .35s cubic-bezier(.16,1,.3,1)}
+canvas.lq{position:absolute;inset:0;width:100%;height:100%;z-index:-2;border-radius:inherit;display:none}
+html.lq-on canvas.lq{display:block}
+html.lq-on .chip canvas.lq{opacity:0;transition:opacity .4s}
+html.lq-on .chip[aria-pressed="true"] canvas.lq{opacity:1}
+html.lq-on .chrome::after,html.lq-on .round::after,html.lq-on .chip[aria-pressed="true"]::after{content:"";position:absolute;inset:2.5px;border-radius:inherit;background:rgba(5,5,7,.9);z-index:-1;transition:background .45s,inset .45s}
+html.lq-on .chrome:hover::after,html.lq-on .round:hover::after{background:rgba(5,5,7,.28);inset:1px}
+html.lq-on .chrome:hover,html.lq-on .round:hover{filter:none;color:#fff;box-shadow:0 0 0 1px rgba(255,255,255,.6),0 10px 40px rgba(0,0,0,.7),0 0 46px rgba(255,255,255,.28)}
+html.lq-on .round:active,html.lq-on .chrome:active{transform:scale(.94)}
+.pill.chrome{padding:11px 22px}
+
+/* ---- liquid title at the end ---- */
+.liq{position:relative;display:inline-block;isolation:isolate;text-decoration:none;line-height:.9}
+.liq canvas{position:absolute;inset:0;width:100%;height:100%}
+.liq span{position:relative;display:block;font-family:var(--serif);font-size:clamp(96px,25vw,380px);letter-spacing:-.03em;padding:.02em .08em .1em;color:#fff}
+html.lq-on .liq span{background:var(--bg);mix-blend-mode:multiply}
+
+/* ---- 3D canisters ---- */
+.cans3d{position:relative;height:clamp(240px,32vw,440px);display:none;touch-action:pan-y}
+.cans3d canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+html.c3d .cans3d{display:block}
+html.c3d .cans{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;opacity:0;pointer-events:none}
+
+/* viewer */
+.lb{position:fixed;inset:0;z-index:80;background:#030303;display:none;grid-template-rows:auto 1fr auto;padding:12px}
+.lb.open{display:grid}
+.lb-top,.lb-bot{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:6px}
+.lb-stage{min-height:0;display:flex;align-items:center;justify-content:center}
+.lb-stage img{max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;border-radius:4px}
+.lb-title{font-family:var(--serif);font-size:24px;line-height:1.1}
+.lb-title small{display:block;font:500 10.5px var(--mono);letter-spacing:.12em;color:var(--dim);margin-top:5px;text-transform:uppercase}
+.lb-nav{display:flex;gap:8px}
+
+@media (max-width:860px){
+  .app,.about{grid-template-columns:1fr}
+  .grid{columns:3;column-gap:6px}.shot{margin-bottom:6px}
+  .hint{display:none}
+  .slide{min-width:0;width:100%}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  .curtain{display:none}
+  .marq div,.end a.big,.soon i{animation:none}
+  .shot,.phone{transition:none;transform:none}
+  .floaty,h1 span b,.chrome,.round,.can .body,.strip.on,h2 i,.say i,.count,.rollname b{animation:none}
+  html.js .rv{opacity:1;transform:none;transition:none}
+  html.js .shot:not(.in) img{opacity:1;transform:none}
+}
+</style>
+</head>
+<body>
+<div class="curtain" aria-hidden="true"><span>Pranad</span></div>
+<div class="grain" aria-hidden="true"></div>
+<div class="prog" id="prog" aria-hidden="true"></div>
+<div class="torch" id="torch" aria-hidden="true"></div>
+<div class="cursor" id="cursor" aria-hidden="true"><b></b></div>
+
+<nav class="nav" aria-label="Sections">
+  <a class="brand" href="#top">Pranad</a>
+  <a class="l s" href="#rolls">Rolls</a>
+  <a class="l s" href="#sheet">Archive</a>
+  <a class="l" href="#app">App</a>
+  <a class="pill chrome mag" href="https://www.instagram.com/pranad_clicks/" target="_blank" rel="noopener">Instagram</a>
+</nav>
+
+<main id="top">
+  <div class="hero" id="hero">
+    <img class="still" src="hero/sea-boat.jpg" alt="A fishing boat in silhouette on glittering water">
+    <canvas id="water" aria-hidden="true"></canvas>
+    <p class="mono hint" id="hint">Move across the water</p>
+    <div class="hero-ui">
+      <div>
+        <p class="mono" style="margin:0;color:#e9e3d8">Mumbai / Photography</p>
+        <h1><span><b>Pranad</b></span></h1>
+      </div>
+      <div class="slide">
+        <div class="n" id="sN">01 / 05</div>
+        <div class="t" id="sT">Silver water</div>
+        <div class="bar"><i id="sB"></i></div>
+      </div>
+    </div>
+  </div>
+
+  <section class="state">
+    <div class="wrap">
+      <p class="mono rv" style="margin:0 0 22px">About</p>
+      <p class="scrub" id="scrub">Mumbai, mostly. Its *festivals, its *sea, and whatever the *sky is doing.</p>
+    </div>
+  </section>
+
+  <section class="reel" id="reel">
+    <div class="ghost" data-speed="-.18" aria-hidden="true">spin spin spin</div>
+    <div class="wrap head">
+      <div><p class="mono rv" style="margin:0">Drag to spin</p><h2 class="rv">The <i>reel</i></h2></div>
+      <p class="mono" style="margin:0" id="ringNow"></p>
+    </div>
+    <div class="stage" id="stage" data-cursor="DRAG">
+      <div class="ring" id="ring">
+        <button class="panel" type="button" data-slug="n12" data-title="Sea and sky" aria-label="Open photo"><img src="t/n12.jpg" alt="" draggable="false"></button>
+        <button class="panel" type="button" data-slug="c22" data-title="Runway" aria-label="Open photo"><img src="t/c22.jpg" alt="" draggable="false"></button>
+        <button class="panel" type="button" data-slug="o118" data-title="Utsav" aria-label="Open photo"><img src="t/o118.jpg" alt="" draggable="false"></button>
+        <button class="panel" type="button" data-slug="o108" data-title="City" aria-label="Open photo"><img src="t/o108.jpg" alt="" draggable="false"></button>
+        <button class="panel" type="button" data-slug="n3" data-title="Sea and sky" aria-label="Open photo"><img src="t/n3.jpg" alt="" draggable="false"></button>
+        <button class="panel" type="button" data-slug="c23" data-title="Runway" aria-label="Open photo"><img src="t/c23.jpg" alt="" draggable="false"></button>
+        <button class="panel" type="button" data-slug="o124" data-title="Utsav" aria-label="Open photo"><img src="t/o124.jpg" alt="" draggable="false"></button>
+        <button class="panel" type="button" data-slug="n15" data-title="Sea and sky" aria-label="Open photo"><img src="t/n15.jpg" alt="" draggable="false"></button>
+        <button class="panel" type="button" data-slug="n27" data-title="City" aria-label="Open photo"><img src="t/n27.jpg" alt="" draggable="false"></button>
+        <button class="panel" type="button" data-slug="c12" data-title="Utsav" aria-label="Open photo"><img src="t/c12.jpg" alt="" draggable="false"></button>
+        <button class="panel" type="button" data-slug="o136" data-title="Sea and sky" aria-label="Open photo"><img src="t/o136.jpg" alt="" draggable="false"></button>
+        <button class="panel" type="button" data-slug="c26" data-title="Runway" aria-label="Open photo"><img src="t/c26.jpg" alt="" draggable="false"></button>
+      </div>
+    </div>
+    <div class="ctrl">
+      <button class="round" id="rPrev" type="button" aria-label="Previous frame">&#8592;</button>
+      <button class="round" id="rNext" type="button" aria-label="Next frame">&#8594;</button>
+    </div>
+  </section>
+
+  <section id="rolls" style="padding-bottom:0">
+    <div class="ghost" data-speed=".2" aria-hidden="true">rolls rolls rolls</div>
+    <div class="wrap head">
+      <div><p class="mono rv" style="margin:0">Pick a roll. Drag the film, or let it run.</p><h2 class="rv">Camera <i>rolls</i></h2></div>
+    </div>
+    <div class="cans3d" id="cans3d" aria-hidden="true"><canvas></canvas></div>
+    <div class="cans rv" id="cans" role="group" aria-label="Choose a camera roll">
+      <button class="can" type="button" data-roll="utsav" data-name="Utsav" data-info="78 frames" aria-pressed="false" style="--c:#ff6a3a" aria-label="Utsav roll, 78 frames"><span class="cap t"></span><span class="body"><span class="band"></span></span><span class="txt"><b>Utsav</b><i>78 FRAMES</i></span><span class="cap b"></span><span class="lip"></span></button>
+      <button class="can" type="button" data-roll="cine" data-name="Cinematics" data-info="20 clips" aria-pressed="false" style="--c:#c3b0ff" aria-label="Cinematics roll, 20 clips"><span class="cap t"></span><span class="body"><span class="band"></span></span><span class="txt"><b>Cinematics</b><i>20 CLIPS</i></span><span class="cap b"></span><span class="lip"></span></button>
+      <button class="can" type="button" data-roll="runway" data-name="Runway" data-info="7 frames" aria-pressed="false" style="--c:#e3e7ee" aria-label="Runway roll, 7 frames"><span class="cap t"></span><span class="body"><span class="band"></span></span><span class="txt"><b>Runway</b><i>7 FRAMES</i></span><span class="cap b"></span><span class="lip"></span></button>
+      <button class="can" type="button" data-roll="sea" data-name="Sea and sky" data-info="25 frames" aria-pressed="false" style="--c:#7cc0ff" aria-label="Sea and sky roll, 25 frames"><span class="cap t"></span><span class="body"><span class="band"></span></span><span class="txt"><b>Sea and sky</b><i>25 FRAMES</i></span><span class="cap b"></span><span class="lip"></span></button>
+      <button class="can" type="button" data-roll="city" data-name="City" data-info="15 frames" aria-pressed="false" style="--c:#ffc766" aria-label="City roll, 15 frames"><span class="cap t"></span><span class="body"><span class="band"></span></span><span class="txt"><b>City</b><i>15 FRAMES</i></span><span class="cap b"></span><span class="lip"></span></button>
+    </div>
+    <div class="film" id="film" data-cursor="DRAG">
+      <div class="strip" data-roll="utsav"><div class="track"><button class="tile" type="button" data-full="p/o118.jpg" data-title="Utsav" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o118.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/o124.jpg" data-title="Utsav" data-exif="" aria-label="Open photo" style="aspect-ratio:487/640"><img src="t/o124.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/o126.jpg" data-title="Utsav" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o126.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/o20.jpg" data-title="Utsav" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o20.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/o123.jpg" data-title="Utsav" data-exif="" aria-label="Open photo" style="aspect-ratio:365/640"><img src="t/o123.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/o101.jpg" data-title="Utsav" data-exif="" aria-label="Open photo" style="aspect-ratio:480/640"><img src="t/o101.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/o32.jpg" data-title="Utsav" data-exif="COOLPIX B700 · 360mm · f/5.6 · 1/1250s · ISO 1400" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o32.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/o86.jpg" data-title="Utsav" data-exif="" aria-label="Open photo" style="aspect-ratio:640/360"><img src="t/o86.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/o44.jpg" data-title="Utsav" data-exif="Xiaomi 15 · 60mm · f/2 · 1/100s · ISO 80" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o44.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/o91.jpg" data-title="Utsav" data-exif="" aria-label="Open photo" style="aspect-ratio:480/640"><img src="t/o91.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/o4.jpg" data-title="Utsav" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o4.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/o129.jpg" data-title="Utsav" data-exif="" aria-label="Open photo" style="aspect-ratio:361/640"><img src="t/o129.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/o78.jpg" data-title="Utsav" data-exif="Pixel 6 · 24mm · f/1.9 · 1/180s · ISO 55" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o78.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/o54.jpg" data-title="Utsav" data-exif="Xiaomi 15 · 120mm · f/2 · 1/122s · ISO 50" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o54.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/o5.jpg" data-title="Utsav" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o5.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/c0.jpg" data-title="Utsav" data-exif="OnePlus 12R · 24mm · f/1.8 · 1/100s · ISO 200" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/c0.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/o80.jpg" data-title="Utsav" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o80.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/o12.jpg" data-title="Utsav" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o12.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/c1.jpg" data-title="Utsav" data-exif="" aria-label="Open photo" style="aspect-ratio:640/360"><img src="t/c1.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/o79.jpg" data-title="Utsav" data-exif="" aria-label="Open photo" style="aspect-ratio:480/640"><img src="t/o79.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/o121.jpg" data-title="Utsav" data-exif="" aria-label="Open photo" style="aspect-ratio:361/640"><img src="t/o121.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/o47.jpg" data-title="Utsav" data-exif="Xiaomi 15 · 23mm · f/1.6 · 1/1530s · ISO 50" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o47.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o118.jpg" data-title="Utsav" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o118.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o124.jpg" data-title="Utsav" data-exif="" aria-label="Open photo" style="aspect-ratio:487/640"><img src="t/o124.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o126.jpg" data-title="Utsav" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o126.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o20.jpg" data-title="Utsav" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o20.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o123.jpg" data-title="Utsav" data-exif="" aria-label="Open photo" style="aspect-ratio:365/640"><img src="t/o123.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o101.jpg" data-title="Utsav" data-exif="" aria-label="Open photo" style="aspect-ratio:480/640"><img src="t/o101.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o32.jpg" data-title="Utsav" data-exif="COOLPIX B700 · 360mm · f/5.6 · 1/1250s · ISO 1400" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o32.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o86.jpg" data-title="Utsav" data-exif="" aria-label="Open photo" style="aspect-ratio:640/360"><img src="t/o86.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o44.jpg" data-title="Utsav" data-exif="Xiaomi 15 · 60mm · f/2 · 1/100s · ISO 80" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o44.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o91.jpg" data-title="Utsav" data-exif="" aria-label="Open photo" style="aspect-ratio:480/640"><img src="t/o91.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o4.jpg" data-title="Utsav" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o4.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o129.jpg" data-title="Utsav" data-exif="" aria-label="Open photo" style="aspect-ratio:361/640"><img src="t/o129.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o78.jpg" data-title="Utsav" data-exif="Pixel 6 · 24mm · f/1.9 · 1/180s · ISO 55" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o78.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o54.jpg" data-title="Utsav" data-exif="Xiaomi 15 · 120mm · f/2 · 1/122s · ISO 50" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o54.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o5.jpg" data-title="Utsav" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o5.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/c0.jpg" data-title="Utsav" data-exif="OnePlus 12R · 24mm · f/1.8 · 1/100s · ISO 200" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/c0.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o80.jpg" data-title="Utsav" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o80.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o12.jpg" data-title="Utsav" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o12.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/c1.jpg" data-title="Utsav" data-exif="" aria-label="Open photo" style="aspect-ratio:640/360"><img src="t/c1.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o79.jpg" data-title="Utsav" data-exif="" aria-label="Open photo" style="aspect-ratio:480/640"><img src="t/o79.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o121.jpg" data-title="Utsav" data-exif="" aria-label="Open photo" style="aspect-ratio:361/640"><img src="t/o121.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o47.jpg" data-title="Utsav" data-exif="Xiaomi 15 · 23mm · f/1.6 · 1/1530s · ISO 50" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o47.jpg" alt="" loading="lazy" draggable="false"></button></div></div>
+      <div class="strip" data-roll="cine"><div class="track"><button class="tile" type="button" data-type="video" data-full="v/s21.mp4" data-poster="v/s21.jpg" data-title="Cinematics" data-exif="" aria-label="Open clip" style="aspect-ratio:506/900"><video muted loop playsinline preload="none" poster="v/s21.jpg" src="v/s21.mp4"></video></button><button class="tile" type="button" data-type="video" data-full="v/s0.mp4" data-poster="v/s0.jpg" data-title="Cinematics" data-exif="" aria-label="Open clip" style="aspect-ratio:506/900"><video muted loop playsinline preload="none" poster="v/s0.jpg" src="v/s0.mp4"></video></button><button class="tile" type="button" data-type="video" data-full="v/s23.mp4" data-poster="v/s23.jpg" data-title="Cinematics" data-exif="" aria-label="Open clip" style="aspect-ratio:900/506"><video muted loop playsinline preload="none" poster="v/s23.jpg" src="v/s23.mp4"></video></button><button class="tile" type="button" data-type="video" data-full="v/s5.mp4" data-poster="v/s5.jpg" data-title="Cinematics" data-exif="" aria-label="Open clip" style="aspect-ratio:900/506"><video muted loop playsinline preload="none" poster="v/s5.jpg" src="v/s5.mp4"></video></button><button class="tile" type="button" data-type="video" data-full="v/s4.mp4" data-poster="v/s4.jpg" data-title="Cinematics" data-exif="" aria-label="Open clip" style="aspect-ratio:506/900"><video muted loop playsinline preload="none" poster="v/s4.jpg" src="v/s4.mp4"></video></button><button class="tile" type="button" data-type="video" data-full="v/s22.mp4" data-poster="v/s22.jpg" data-title="Cinematics" data-exif="" aria-label="Open clip" style="aspect-ratio:900/506"><video muted loop playsinline preload="none" poster="v/s22.jpg" src="v/s22.mp4"></video></button><button class="tile" type="button" data-type="video" data-full="v/s13.mp4" data-poster="v/s13.jpg" data-title="Cinematics" data-exif="" aria-label="Open clip" style="aspect-ratio:506/900"><video muted loop playsinline preload="none" poster="v/s13.jpg" src="v/s13.mp4"></video></button><button class="tile" type="button" data-type="video" data-full="v/s24.mp4" data-poster="v/s24.jpg" data-title="Cinematics" data-exif="" aria-label="Open clip" style="aspect-ratio:506/900"><video muted loop playsinline preload="none" poster="v/s24.jpg" src="v/s24.mp4"></video></button><button class="tile" type="button" data-type="video" data-full="v/s20.mp4" data-poster="v/s20.jpg" data-title="Cinematics" data-exif="" aria-label="Open clip" style="aspect-ratio:900/506"><video muted loop playsinline preload="none" poster="v/s20.jpg" src="v/s20.mp4"></video></button><button class="tile" type="button" data-type="video" data-full="v/s10.mp4" data-poster="v/s10.jpg" data-title="Cinematics" data-exif="" aria-label="Open clip" style="aspect-ratio:506/900"><video muted loop playsinline preload="none" poster="v/s10.jpg" src="v/s10.mp4"></video></button><button class="tile" type="button" data-type="video" data-full="v/s7.mp4" data-poster="v/s7.jpg" data-title="Cinematics" data-exif="" aria-label="Open clip" style="aspect-ratio:900/506"><video muted loop playsinline preload="none" poster="v/s7.jpg" src="v/s7.mp4"></video></button><button class="tile" type="button" data-type="video" data-full="v/s3.mp4" data-poster="v/s3.jpg" data-title="Cinematics" data-exif="" aria-label="Open clip" style="aspect-ratio:506/900"><video muted loop playsinline preload="none" poster="v/s3.jpg" src="v/s3.mp4"></video></button><button class="tile" type="button" data-type="video" data-full="v/s14.mp4" data-poster="v/s14.jpg" data-title="Cinematics" data-exif="" aria-label="Open clip" style="aspect-ratio:900/506"><video muted loop playsinline preload="none" poster="v/s14.jpg" src="v/s14.mp4"></video></button><button class="tile" type="button" data-type="video" data-full="v/s12.mp4" data-poster="v/s12.jpg" data-title="Cinematics" data-exif="" aria-label="Open clip" style="aspect-ratio:506/900"><video muted loop playsinline preload="none" poster="v/s12.jpg" src="v/s12.mp4"></video></button><button class="tile" type="button" data-type="video" data-full="v/s9.mp4" data-poster="v/s9.jpg" data-title="Cinematics" data-exif="" aria-label="Open clip" style="aspect-ratio:900/506"><video muted loop playsinline preload="none" poster="v/s9.jpg" src="v/s9.mp4"></video></button><button class="tile" type="button" data-type="video" data-full="v/s16.mp4" data-poster="v/s16.jpg" data-title="Cinematics" data-exif="" aria-label="Open clip" style="aspect-ratio:506/900"><video muted loop playsinline preload="none" poster="v/s16.jpg" src="v/s16.mp4"></video></button><button class="tile" type="button" data-type="video" data-full="v/s1.mp4" data-poster="v/s1.jpg" data-title="Cinematics" data-exif="" aria-label="Open clip" style="aspect-ratio:900/506"><video muted loop playsinline preload="none" poster="v/s1.jpg" src="v/s1.mp4"></video></button><button class="tile" type="button" data-type="video" data-full="v/s15.mp4" data-poster="v/s15.jpg" data-title="Cinematics" data-exif="" aria-label="Open clip" style="aspect-ratio:900/506"><video muted loop playsinline preload="none" poster="v/s15.jpg" src="v/s15.mp4"></video></button><button class="tile" type="button" data-type="video" data-full="v/s11.mp4" data-poster="v/s11.jpg" data-title="Cinematics" data-exif="" aria-label="Open clip" style="aspect-ratio:900/506"><video muted loop playsinline preload="none" poster="v/s11.jpg" src="v/s11.mp4"></video></button><button class="tile" type="button" data-type="video" data-full="v/s6.mp4" data-poster="v/s6.jpg" data-title="Cinematics" data-exif="" aria-label="Open clip" style="aspect-ratio:900/506"><video muted loop playsinline preload="none" poster="v/s6.jpg" src="v/s6.mp4"></video></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-type="video" data-full="v/s21.mp4" data-poster="v/s21.jpg" data-title="Cinematics" data-exif="" aria-label="Open clip" style="aspect-ratio:506/900"><video muted loop playsinline preload="none" poster="v/s21.jpg" src="v/s21.mp4"></video></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-type="video" data-full="v/s0.mp4" data-poster="v/s0.jpg" data-title="Cinematics" data-exif="" aria-label="Open clip" style="aspect-ratio:506/900"><video muted loop playsinline preload="none" poster="v/s0.jpg" src="v/s0.mp4"></video></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-type="video" data-full="v/s23.mp4" data-poster="v/s23.jpg" data-title="Cinematics" data-exif="" aria-label="Open clip" style="aspect-ratio:900/506"><video muted loop playsinline preload="none" poster="v/s23.jpg" src="v/s23.mp4"></video></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-type="video" data-full="v/s5.mp4" data-poster="v/s5.jpg" data-title="Cinematics" data-exif="" aria-label="Open clip" style="aspect-ratio:900/506"><video muted loop playsinline preload="none" poster="v/s5.jpg" src="v/s5.mp4"></video></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-type="video" data-full="v/s4.mp4" data-poster="v/s4.jpg" data-title="Cinematics" data-exif="" aria-label="Open clip" style="aspect-ratio:506/900"><video muted loop playsinline preload="none" poster="v/s4.jpg" src="v/s4.mp4"></video></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-type="video" data-full="v/s22.mp4" data-poster="v/s22.jpg" data-title="Cinematics" data-exif="" aria-label="Open clip" style="aspect-ratio:900/506"><video muted loop playsinline preload="none" poster="v/s22.jpg" src="v/s22.mp4"></video></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-type="video" data-full="v/s13.mp4" data-poster="v/s13.jpg" data-title="Cinematics" data-exif="" aria-label="Open clip" style="aspect-ratio:506/900"><video muted loop playsinline preload="none" poster="v/s13.jpg" src="v/s13.mp4"></video></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-type="video" data-full="v/s24.mp4" data-poster="v/s24.jpg" data-title="Cinematics" data-exif="" aria-label="Open clip" style="aspect-ratio:506/900"><video muted loop playsinline preload="none" poster="v/s24.jpg" src="v/s24.mp4"></video></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-type="video" data-full="v/s20.mp4" data-poster="v/s20.jpg" data-title="Cinematics" data-exif="" aria-label="Open clip" style="aspect-ratio:900/506"><video muted loop playsinline preload="none" poster="v/s20.jpg" src="v/s20.mp4"></video></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-type="video" data-full="v/s10.mp4" data-poster="v/s10.jpg" data-title="Cinematics" data-exif="" aria-label="Open clip" style="aspect-ratio:506/900"><video muted loop playsinline preload="none" poster="v/s10.jpg" src="v/s10.mp4"></video></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-type="video" data-full="v/s7.mp4" data-poster="v/s7.jpg" data-title="Cinematics" data-exif="" aria-label="Open clip" style="aspect-ratio:900/506"><video muted loop playsinline preload="none" poster="v/s7.jpg" src="v/s7.mp4"></video></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-type="video" data-full="v/s3.mp4" data-poster="v/s3.jpg" data-title="Cinematics" data-exif="" aria-label="Open clip" style="aspect-ratio:506/900"><video muted loop playsinline preload="none" poster="v/s3.jpg" src="v/s3.mp4"></video></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-type="video" data-full="v/s14.mp4" data-poster="v/s14.jpg" data-title="Cinematics" data-exif="" aria-label="Open clip" style="aspect-ratio:900/506"><video muted loop playsinline preload="none" poster="v/s14.jpg" src="v/s14.mp4"></video></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-type="video" data-full="v/s12.mp4" data-poster="v/s12.jpg" data-title="Cinematics" data-exif="" aria-label="Open clip" style="aspect-ratio:506/900"><video muted loop playsinline preload="none" poster="v/s12.jpg" src="v/s12.mp4"></video></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-type="video" data-full="v/s9.mp4" data-poster="v/s9.jpg" data-title="Cinematics" data-exif="" aria-label="Open clip" style="aspect-ratio:900/506"><video muted loop playsinline preload="none" poster="v/s9.jpg" src="v/s9.mp4"></video></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-type="video" data-full="v/s16.mp4" data-poster="v/s16.jpg" data-title="Cinematics" data-exif="" aria-label="Open clip" style="aspect-ratio:506/900"><video muted loop playsinline preload="none" poster="v/s16.jpg" src="v/s16.mp4"></video></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-type="video" data-full="v/s1.mp4" data-poster="v/s1.jpg" data-title="Cinematics" data-exif="" aria-label="Open clip" style="aspect-ratio:900/506"><video muted loop playsinline preload="none" poster="v/s1.jpg" src="v/s1.mp4"></video></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-type="video" data-full="v/s15.mp4" data-poster="v/s15.jpg" data-title="Cinematics" data-exif="" aria-label="Open clip" style="aspect-ratio:900/506"><video muted loop playsinline preload="none" poster="v/s15.jpg" src="v/s15.mp4"></video></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-type="video" data-full="v/s11.mp4" data-poster="v/s11.jpg" data-title="Cinematics" data-exif="" aria-label="Open clip" style="aspect-ratio:900/506"><video muted loop playsinline preload="none" poster="v/s11.jpg" src="v/s11.mp4"></video></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-type="video" data-full="v/s6.mp4" data-poster="v/s6.jpg" data-title="Cinematics" data-exif="" aria-label="Open clip" style="aspect-ratio:900/506"><video muted loop playsinline preload="none" poster="v/s6.jpg" src="v/s6.mp4"></video></button></div></div>
+      <div class="strip" data-roll="runway"><div class="track"><button class="tile" type="button" data-full="p/c20.jpg" data-title="Runway" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/c20.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/c21.jpg" data-title="Runway" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/c21.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/c22.jpg" data-title="Runway" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/c22.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/c23.jpg" data-title="Runway" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/c23.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/c24.jpg" data-title="Runway" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/c24.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/c25.jpg" data-title="Runway" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/c25.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/c26.jpg" data-title="Runway" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/c26.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/c20.jpg" data-title="Runway" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/c20.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/c21.jpg" data-title="Runway" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/c21.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/c22.jpg" data-title="Runway" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/c22.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/c23.jpg" data-title="Runway" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/c23.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/c24.jpg" data-title="Runway" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/c24.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/c25.jpg" data-title="Runway" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/c25.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/c26.jpg" data-title="Runway" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/c26.jpg" alt="" loading="lazy" draggable="false"></button></div></div>
+      <div class="strip" data-roll="sea"><div class="track"><button class="tile" type="button" data-full="p/n12.jpg" data-title="Sea and sky" data-exif="COOLPIX B700 · 115mm · f/5 · 1/800s · ISO 100" aria-label="Open photo" style="aspect-ratio:480/640"><img src="t/n12.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/n3.jpg" data-title="Sea and sky" data-exif="COOLPIX B700 · 550mm · f/8 · 1/2500s · ISO 100" aria-label="Open photo" style="aspect-ratio:480/640"><img src="t/n3.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/n0.jpg" data-title="Sea and sky" data-exif="" aria-label="Open photo" style="aspect-ratio:640/480"><img src="t/n0.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/o136.jpg" data-title="Sea and sky" data-exif="" aria-label="Open photo" style="aspect-ratio:361/640"><img src="t/o136.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/n15.jpg" data-title="Sea and sky" data-exif="COOLPIX B700 · 1440mm · f/6.5 · 1/125s · ISO 800" aria-label="Open photo" style="aspect-ratio:480/640"><img src="t/n15.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/n26.jpg" data-title="Sea and sky" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/n26.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/o133.jpg" data-title="Sea and sky" data-exif="" aria-label="Open photo" style="aspect-ratio:361/640"><img src="t/o133.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/o55.jpg" data-title="Sea and sky" data-exif="Xiaomi 15 · 230mm · f/2 · 1/5025s · ISO 50" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o55.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/n29.jpg" data-title="Sea and sky" data-exif="" aria-label="Open photo" style="aspect-ratio:640/360"><img src="t/n29.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/o60.jpg" data-title="Sea and sky" data-exif="Xiaomi 15 · 1381mm · f/2 · 1/100s · ISO 125" aria-label="Open photo" style="aspect-ratio:480/640"><img src="t/o60.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/n42.jpg" data-title="Sea and sky" data-exif="" aria-label="Open photo" style="aspect-ratio:640/360"><img src="t/n42.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/o81.jpg" data-title="Sea and sky" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o81.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/o62.jpg" data-title="Sea and sky" data-exif="Xiaomi 15 · 1381mm · f/2 · 1/100s · ISO 1250" aria-label="Open photo" style="aspect-ratio:480/640"><img src="t/o62.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/o72.jpg" data-title="Sea and sky" data-exif="Pixel 6 · 24mm · f/1.9 · 1/550s · ISO 374" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o72.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/n38.jpg" data-title="Sea and sky" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/n38.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/n30.jpg" data-title="Sea and sky" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/n30.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/n37.jpg" data-title="Sea and sky" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/n37.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/n40.jpg" data-title="Sea and sky" data-exif="" aria-label="Open photo" style="aspect-ratio:640/360"><img src="t/n40.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/o63.jpg" data-title="Sea and sky" data-exif="Xiaomi 15 · 1381mm · f/2 · 1/109s · ISO 80" aria-label="Open photo" style="aspect-ratio:480/640"><img src="t/o63.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/n35.jpg" data-title="Sea and sky" data-exif="" aria-label="Open photo" style="aspect-ratio:640/360"><img src="t/n35.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/o37.jpg" data-title="Sea and sky" data-exif="Xiaomi 15 · 60mm · f/2 · 1/430s · ISO 50" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o37.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/o66.jpg" data-title="Sea and sky" data-exif="Xiaomi 15 · 87mm · f/2 · 1/20s · ISO 800" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o66.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/n12.jpg" data-title="Sea and sky" data-exif="COOLPIX B700 · 115mm · f/5 · 1/800s · ISO 100" aria-label="Open photo" style="aspect-ratio:480/640"><img src="t/n12.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/n3.jpg" data-title="Sea and sky" data-exif="COOLPIX B700 · 550mm · f/8 · 1/2500s · ISO 100" aria-label="Open photo" style="aspect-ratio:480/640"><img src="t/n3.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/n0.jpg" data-title="Sea and sky" data-exif="" aria-label="Open photo" style="aspect-ratio:640/480"><img src="t/n0.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o136.jpg" data-title="Sea and sky" data-exif="" aria-label="Open photo" style="aspect-ratio:361/640"><img src="t/o136.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/n15.jpg" data-title="Sea and sky" data-exif="COOLPIX B700 · 1440mm · f/6.5 · 1/125s · ISO 800" aria-label="Open photo" style="aspect-ratio:480/640"><img src="t/n15.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/n26.jpg" data-title="Sea and sky" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/n26.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o133.jpg" data-title="Sea and sky" data-exif="" aria-label="Open photo" style="aspect-ratio:361/640"><img src="t/o133.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o55.jpg" data-title="Sea and sky" data-exif="Xiaomi 15 · 230mm · f/2 · 1/5025s · ISO 50" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o55.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/n29.jpg" data-title="Sea and sky" data-exif="" aria-label="Open photo" style="aspect-ratio:640/360"><img src="t/n29.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o60.jpg" data-title="Sea and sky" data-exif="Xiaomi 15 · 1381mm · f/2 · 1/100s · ISO 125" aria-label="Open photo" style="aspect-ratio:480/640"><img src="t/o60.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/n42.jpg" data-title="Sea and sky" data-exif="" aria-label="Open photo" style="aspect-ratio:640/360"><img src="t/n42.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o81.jpg" data-title="Sea and sky" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o81.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o62.jpg" data-title="Sea and sky" data-exif="Xiaomi 15 · 1381mm · f/2 · 1/100s · ISO 1250" aria-label="Open photo" style="aspect-ratio:480/640"><img src="t/o62.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o72.jpg" data-title="Sea and sky" data-exif="Pixel 6 · 24mm · f/1.9 · 1/550s · ISO 374" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o72.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/n38.jpg" data-title="Sea and sky" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/n38.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/n30.jpg" data-title="Sea and sky" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/n30.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/n37.jpg" data-title="Sea and sky" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/n37.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/n40.jpg" data-title="Sea and sky" data-exif="" aria-label="Open photo" style="aspect-ratio:640/360"><img src="t/n40.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o63.jpg" data-title="Sea and sky" data-exif="Xiaomi 15 · 1381mm · f/2 · 1/109s · ISO 80" aria-label="Open photo" style="aspect-ratio:480/640"><img src="t/o63.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/n35.jpg" data-title="Sea and sky" data-exif="" aria-label="Open photo" style="aspect-ratio:640/360"><img src="t/n35.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o37.jpg" data-title="Sea and sky" data-exif="Xiaomi 15 · 60mm · f/2 · 1/430s · ISO 50" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o37.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o66.jpg" data-title="Sea and sky" data-exif="Xiaomi 15 · 87mm · f/2 · 1/20s · ISO 800" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o66.jpg" alt="" loading="lazy" draggable="false"></button></div></div>
+      <div class="strip" data-roll="city"><div class="track"><button class="tile" type="button" data-full="p/o108.jpg" data-title="City" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o108.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/n27.jpg" data-title="City" data-exif="Pixel 6 · 24mm · f/1.9 · 1/100s · ISO 208" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/n27.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/o58.jpg" data-title="City" data-exif="Xiaomi 15 · 23mm · f/1.6 · 1/100s · ISO 80" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o58.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/o71.jpg" data-title="City" data-exif="Pixel 6 · 24mm · f/1.9 · 1/560s · ISO 48" aria-label="Open photo" style="aspect-ratio:414/640"><img src="t/o71.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/o35.jpg" data-title="City" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o35.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/n23.jpg" data-title="City" data-exif="Pixel 6 · 24mm · f/1.9 · 1/1150s · ISO 43" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/n23.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/o36.jpg" data-title="City" data-exif="Xiaomi 15 · 46mm · f/1.6 · 1/100s · ISO 64" aria-label="Open photo" style="aspect-ratio:480/640"><img src="t/o36.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/n22.jpg" data-title="City" data-exif="" aria-label="Open photo" style="aspect-ratio:640/360"><img src="t/n22.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/n24.jpg" data-title="City" data-exif="Pixel 6 · 24mm · f/1.9 · 1/1150s · ISO 45" aria-label="Open photo" style="aspect-ratio:640/360"><img src="t/n24.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/o69.jpg" data-title="City" data-exif="Pixel 6 · 24mm · f/1.9 · 1/1400s · ISO 43" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o69.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/o74.jpg" data-title="City" data-exif="Pixel 6 · 24mm · f/1.9 · 1/310s · ISO 152" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o74.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/n25.jpg" data-title="City" data-exif="Pixel 6 · 24mm · f/1.9 · 1/3200s · ISO 46" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/n25.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/o57.jpg" data-title="City" data-exif="Xiaomi 15 · 120mm · f/2 · 1/37s · ISO 1250" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o57.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/n28.jpg" data-title="City" data-exif="" aria-label="Open photo" style="aspect-ratio:640/360"><img src="t/n28.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/o83.jpg" data-title="City" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o83.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o108.jpg" data-title="City" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o108.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/n27.jpg" data-title="City" data-exif="Pixel 6 · 24mm · f/1.9 · 1/100s · ISO 208" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/n27.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o58.jpg" data-title="City" data-exif="Xiaomi 15 · 23mm · f/1.6 · 1/100s · ISO 80" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o58.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o71.jpg" data-title="City" data-exif="Pixel 6 · 24mm · f/1.9 · 1/560s · ISO 48" aria-label="Open photo" style="aspect-ratio:414/640"><img src="t/o71.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o35.jpg" data-title="City" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o35.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/n23.jpg" data-title="City" data-exif="Pixel 6 · 24mm · f/1.9 · 1/1150s · ISO 43" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/n23.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o36.jpg" data-title="City" data-exif="Xiaomi 15 · 46mm · f/1.6 · 1/100s · ISO 64" aria-label="Open photo" style="aspect-ratio:480/640"><img src="t/o36.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/n22.jpg" data-title="City" data-exif="" aria-label="Open photo" style="aspect-ratio:640/360"><img src="t/n22.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/n24.jpg" data-title="City" data-exif="Pixel 6 · 24mm · f/1.9 · 1/1150s · ISO 45" aria-label="Open photo" style="aspect-ratio:640/360"><img src="t/n24.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o69.jpg" data-title="City" data-exif="Pixel 6 · 24mm · f/1.9 · 1/1400s · ISO 43" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o69.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o74.jpg" data-title="City" data-exif="Pixel 6 · 24mm · f/1.9 · 1/310s · ISO 152" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o74.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/n25.jpg" data-title="City" data-exif="Pixel 6 · 24mm · f/1.9 · 1/3200s · ISO 46" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/n25.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o57.jpg" data-title="City" data-exif="Xiaomi 15 · 120mm · f/2 · 1/37s · ISO 1250" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o57.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/n28.jpg" data-title="City" data-exif="" aria-label="Open photo" style="aspect-ratio:640/360"><img src="t/n28.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o83.jpg" data-title="City" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o83.jpg" alt="" loading="lazy" draggable="false"></button></div></div>
+    </div>
+    <div class="rollname"><b id="rollName"></b><span class="mono" id="rollInfo"></span></div>
+  </section>
+
+  <section id="sheet">
+    <div class="ghost" data-speed="-.14" aria-hidden="true">archive archive</div>
+    <div class="wrap">
+      <div class="head">
+        <div><p class="mono rv" style="margin:0"><span data-count="125">125</span> frames</p><h2 class="rv">The <i>archive</i></h2></div>
+        <div class="filters rv" role="group" aria-label="Filter photos">
+          <button class="chip" type="button" data-f="all" aria-pressed="true">All</button>
+          <button class="chip" type="button" data-f="utsav" aria-pressed="false">Utsav</button>
+          <button class="chip" type="button" data-f="city" aria-pressed="false">City</button>
+          <button class="chip" type="button" data-f="sea" aria-pressed="false">Sea and sky</button>
+          <button class="chip" type="button" data-f="runway" aria-pressed="false">Runway</button>
+        </div>
+      </div>
+      <div class="grid" id="grid">
+        <button class="shot" type="button" data-slug="n12" data-cat="sea" data-full="p/n12.jpg" data-title="Sea and sky" data-exif="COOLPIX B700 · 115mm · f/5 · 1/800s · ISO 100"><img src="t/n12.jpg" width="480" height="640" loading="lazy" alt="Sea and sky photograph"></button>
+        <button class="shot" type="button" data-slug="o118" data-cat="utsav" data-full="p/o118.jpg" data-title="Utsav" data-exif=""><img src="t/o118.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="n3" data-cat="sea" data-full="p/n3.jpg" data-title="Sea and sky" data-exif="COOLPIX B700 · 550mm · f/8 · 1/2500s · ISO 100"><img src="t/n3.jpg" width="480" height="640" loading="lazy" alt="Sea and sky photograph"></button>
+        <button class="shot" type="button" data-slug="o108" data-cat="city" data-full="p/o108.jpg" data-title="City" data-exif=""><img src="t/o108.jpg" width="360" height="640" loading="lazy" alt="City photograph"></button>
+        <button class="shot" type="button" data-slug="o124" data-cat="utsav" data-full="p/o124.jpg" data-title="Utsav" data-exif=""><img src="t/o124.jpg" width="487" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="n0" data-cat="sea" data-full="p/n0.jpg" data-title="Sea and sky" data-exif=""><img src="t/n0.jpg" width="640" height="480" loading="lazy" alt="Sea and sky photograph"></button>
+        <button class="shot" type="button" data-slug="o126" data-cat="utsav" data-full="p/o126.jpg" data-title="Utsav" data-exif=""><img src="t/o126.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="n27" data-cat="city" data-full="p/n27.jpg" data-title="City" data-exif="Pixel 6 · 24mm · f/1.9 · 1/100s · ISO 208"><img src="t/n27.jpg" width="360" height="640" loading="lazy" alt="City photograph"></button>
+        <button class="shot" type="button" data-slug="o136" data-cat="sea" data-full="p/o136.jpg" data-title="Sea and sky" data-exif=""><img src="t/o136.jpg" width="361" height="640" loading="lazy" alt="Sea and sky photograph"></button>
+        <button class="shot" type="button" data-slug="o20" data-cat="utsav" data-full="p/o20.jpg" data-title="Utsav" data-exif=""><img src="t/o20.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="c20" data-cat="runway" data-full="p/c20.jpg" data-title="Runway" data-exif=""><img src="t/c20.jpg" width="360" height="640" loading="lazy" alt="Runway photograph"></button>
+        <button class="shot" type="button" data-slug="n15" data-cat="sea" data-full="p/n15.jpg" data-title="Sea and sky" data-exif="COOLPIX B700 · 1440mm · f/6.5 · 1/125s · ISO 800"><img src="t/n15.jpg" width="480" height="640" loading="lazy" alt="Sea and sky photograph"></button>
+        <button class="shot" type="button" data-slug="o123" data-cat="utsav" data-full="p/o123.jpg" data-title="Utsav" data-exif=""><img src="t/o123.jpg" width="365" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="n26" data-cat="sea" data-full="p/n26.jpg" data-title="Sea and sky" data-exif=""><img src="t/n26.jpg" width="360" height="640" loading="lazy" alt="Sea and sky photograph"></button>
+        <button class="shot" type="button" data-slug="c21" data-cat="runway" data-full="p/c21.jpg" data-title="Runway" data-exif=""><img src="t/c21.jpg" width="360" height="640" loading="lazy" alt="Runway photograph"></button>
+        <button class="shot" type="button" data-slug="o101" data-cat="utsav" data-full="p/o101.jpg" data-title="Utsav" data-exif=""><img src="t/o101.jpg" width="480" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o133" data-cat="sea" data-full="p/o133.jpg" data-title="Sea and sky" data-exif=""><img src="t/o133.jpg" width="361" height="640" loading="lazy" alt="Sea and sky photograph"></button>
+        <button class="shot" type="button" data-slug="o32" data-cat="utsav" data-full="p/o32.jpg" data-title="Utsav" data-exif="COOLPIX B700 · 360mm · f/5.6 · 1/1250s · ISO 1400"><img src="t/o32.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="c22" data-cat="runway" data-full="p/c22.jpg" data-title="Runway" data-exif=""><img src="t/c22.jpg" width="360" height="640" loading="lazy" alt="Runway photograph"></button>
+        <button class="shot" type="button" data-slug="o86" data-cat="utsav" data-full="p/o86.jpg" data-title="Utsav" data-exif=""><img src="t/o86.jpg" width="640" height="360" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o44" data-cat="utsav" data-full="p/o44.jpg" data-title="Utsav" data-exif="Xiaomi 15 · 60mm · f/2 · 1/100s · ISO 80"><img src="t/o44.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o55" data-cat="sea" data-full="p/o55.jpg" data-title="Sea and sky" data-exif="Xiaomi 15 · 230mm · f/2 · 1/5025s · ISO 50"><img src="t/o55.jpg" width="360" height="640" loading="lazy" alt="Sea and sky photograph"></button>
+        <button class="shot" type="button" data-slug="c23" data-cat="runway" data-full="p/c23.jpg" data-title="Runway" data-exif=""><img src="t/c23.jpg" width="360" height="640" loading="lazy" alt="Runway photograph"></button>
+        <button class="shot" type="button" data-slug="o58" data-cat="city" data-full="p/o58.jpg" data-title="City" data-exif="Xiaomi 15 · 23mm · f/1.6 · 1/100s · ISO 80"><img src="t/o58.jpg" width="360" height="640" loading="lazy" alt="City photograph"></button>
+        <button class="shot" type="button" data-slug="o91" data-cat="utsav" data-full="p/o91.jpg" data-title="Utsav" data-exif=""><img src="t/o91.jpg" width="480" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o4" data-cat="utsav" data-full="p/o4.jpg" data-title="Utsav" data-exif=""><img src="t/o4.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="c24" data-cat="runway" data-full="p/c24.jpg" data-title="Runway" data-exif=""><img src="t/c24.jpg" width="360" height="640" loading="lazy" alt="Runway photograph"></button>
+        <button class="shot" type="button" data-slug="o129" data-cat="utsav" data-full="p/o129.jpg" data-title="Utsav" data-exif=""><img src="t/o129.jpg" width="361" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o71" data-cat="city" data-full="p/o71.jpg" data-title="City" data-exif="Pixel 6 · 24mm · f/1.9 · 1/560s · ISO 48"><img src="t/o71.jpg" width="414" height="640" loading="lazy" alt="City photograph"></button>
+        <button class="shot" type="button" data-slug="o78" data-cat="utsav" data-full="p/o78.jpg" data-title="Utsav" data-exif="Pixel 6 · 24mm · f/1.9 · 1/180s · ISO 55"><img src="t/o78.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="c25" data-cat="runway" data-full="p/c25.jpg" data-title="Runway" data-exif=""><img src="t/c25.jpg" width="360" height="640" loading="lazy" alt="Runway photograph"></button>
+        <button class="shot" type="button" data-slug="o35" data-cat="city" data-full="p/o35.jpg" data-title="City" data-exif=""><img src="t/o35.jpg" width="360" height="640" loading="lazy" alt="City photograph"></button>
+        <button class="shot" type="button" data-slug="o54" data-cat="utsav" data-full="p/o54.jpg" data-title="Utsav" data-exif="Xiaomi 15 · 120mm · f/2 · 1/122s · ISO 50"><img src="t/o54.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="n29" data-cat="sea" data-full="p/n29.jpg" data-title="Sea and sky" data-exif=""><img src="t/n29.jpg" width="640" height="360" loading="lazy" alt="Sea and sky photograph"></button>
+        <button class="shot" type="button" data-slug="c26" data-cat="runway" data-full="p/c26.jpg" data-title="Runway" data-exif=""><img src="t/c26.jpg" width="360" height="640" loading="lazy" alt="Runway photograph"></button>
+        <button class="shot" type="button" data-slug="o60" data-cat="sea" data-full="p/o60.jpg" data-title="Sea and sky" data-exif="Xiaomi 15 · 1381mm · f/2 · 1/100s · ISO 125"><img src="t/o60.jpg" width="480" height="640" loading="lazy" alt="Sea and sky photograph"></button>
+        <button class="shot" type="button" data-slug="n23" data-cat="city" data-full="p/n23.jpg" data-title="City" data-exif="Pixel 6 · 24mm · f/1.9 · 1/1150s · ISO 43"><img src="t/n23.jpg" width="360" height="640" loading="lazy" alt="City photograph"></button>
+        <button class="shot" type="button" data-slug="o5" data-cat="utsav" data-full="p/o5.jpg" data-title="Utsav" data-exif=""><img src="t/o5.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="c0" data-cat="utsav" data-full="p/c0.jpg" data-title="Utsav" data-exif="OnePlus 12R · 24mm · f/1.8 · 1/100s · ISO 200"><img src="t/c0.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o80" data-cat="utsav" data-full="p/o80.jpg" data-title="Utsav" data-exif=""><img src="t/o80.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o12" data-cat="utsav" data-full="p/o12.jpg" data-title="Utsav" data-exif=""><img src="t/o12.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="n42" data-cat="sea" data-full="p/n42.jpg" data-title="Sea and sky" data-exif=""><img src="t/n42.jpg" width="640" height="360" loading="lazy" alt="Sea and sky photograph"></button>
+        <button class="shot" type="button" data-slug="c1" data-cat="utsav" data-full="p/c1.jpg" data-title="Utsav" data-exif=""><img src="t/c1.jpg" width="640" height="360" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o79" data-cat="utsav" data-full="p/o79.jpg" data-title="Utsav" data-exif=""><img src="t/o79.jpg" width="480" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o121" data-cat="utsav" data-full="p/o121.jpg" data-title="Utsav" data-exif=""><img src="t/o121.jpg" width="361" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o47" data-cat="utsav" data-full="p/o47.jpg" data-title="Utsav" data-exif="Xiaomi 15 · 23mm · f/1.6 · 1/1530s · ISO 50"><img src="t/o47.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="c5" data-cat="utsav" data-full="p/c5.jpg" data-title="Utsav" data-exif="Xiaomi 15 · 60mm · f/2 · 1/100s · ISO 500"><img src="t/c5.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o81" data-cat="sea" data-full="p/o81.jpg" data-title="Sea and sky" data-exif=""><img src="t/o81.jpg" width="360" height="640" loading="lazy" alt="Sea and sky photograph"></button>
+        <button class="shot" type="button" data-slug="o87" data-cat="utsav" data-full="p/o87.jpg" data-title="Utsav" data-exif=""><img src="t/o87.jpg" width="480" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o18" data-cat="utsav" data-full="p/o18.jpg" data-title="Utsav" data-exif=""><img src="t/o18.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="c7" data-cat="utsav" data-full="p/c7.jpg" data-title="Utsav" data-exif="Xiaomi 15 · 60mm · f/2 · 1/33s · ISO 640"><img src="t/c7.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o49" data-cat="utsav" data-full="p/o49.jpg" data-title="Utsav" data-exif="Xiaomi 15 · 120mm · f/2 · 1/149s · ISO 50"><img src="t/o49.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o25" data-cat="utsav" data-full="p/o25.jpg" data-title="Utsav" data-exif="Galaxy S24 Ultra · 115mm · f/3.4 · 1/100s · ISO 50"><img src="t/o25.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o36" data-cat="city" data-full="p/o36.jpg" data-title="City" data-exif="Xiaomi 15 · 46mm · f/1.6 · 1/100s · ISO 64"><img src="t/o36.jpg" width="480" height="640" loading="lazy" alt="City photograph"></button>
+        <button class="shot" type="button" data-slug="c9" data-cat="utsav" data-full="p/c9.jpg" data-title="Utsav" data-exif=""><img src="t/c9.jpg" width="375" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o45" data-cat="utsav" data-full="p/o45.jpg" data-title="Utsav" data-exif="Xiaomi 15 · 107mm · f/2 · 1/216s · ISO 50"><img src="t/o45.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o27" data-cat="utsav" data-full="p/o27.jpg" data-title="Utsav" data-exif="Galaxy S24 · 69mm · f/2.4 · 1/100s · ISO 32"><img src="t/o27.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o62" data-cat="sea" data-full="p/o62.jpg" data-title="Sea and sky" data-exif="Xiaomi 15 · 1381mm · f/2 · 1/100s · ISO 1250"><img src="t/o62.jpg" width="480" height="640" loading="lazy" alt="Sea and sky photograph"></button>
+        <button class="shot" type="button" data-slug="c10" data-cat="utsav" data-full="p/c10.jpg" data-title="Utsav" data-exif=""><img src="t/c10.jpg" width="375" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o72" data-cat="sea" data-full="p/o72.jpg" data-title="Sea and sky" data-exif="Pixel 6 · 24mm · f/1.9 · 1/550s · ISO 374"><img src="t/o72.jpg" width="360" height="640" loading="lazy" alt="Sea and sky photograph"></button>
+        <button class="shot" type="button" data-slug="n38" data-cat="sea" data-full="p/n38.jpg" data-title="Sea and sky" data-exif=""><img src="t/n38.jpg" width="360" height="640" loading="lazy" alt="Sea and sky photograph"></button>
+        <button class="shot" type="button" data-slug="n22" data-cat="city" data-full="p/n22.jpg" data-title="City" data-exif=""><img src="t/n22.jpg" width="640" height="360" loading="lazy" alt="City photograph"></button>
+        <button class="shot" type="button" data-slug="c11" data-cat="utsav" data-full="p/c11.jpg" data-title="Utsav" data-exif=""><img src="t/c11.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o106" data-cat="utsav" data-full="p/o106.jpg" data-title="Utsav" data-exif=""><img src="t/o106.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o48" data-cat="utsav" data-full="p/o48.jpg" data-title="Utsav" data-exif=""><img src="t/o48.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="n30" data-cat="sea" data-full="p/n30.jpg" data-title="Sea and sky" data-exif=""><img src="t/n30.jpg" width="360" height="640" loading="lazy" alt="Sea and sky photograph"></button>
+        <button class="shot" type="button" data-slug="c12" data-cat="utsav" data-full="p/c12.jpg" data-title="Utsav" data-exif=""><img src="t/c12.jpg" width="378" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="n37" data-cat="sea" data-full="p/n37.jpg" data-title="Sea and sky" data-exif=""><img src="t/n37.jpg" width="360" height="640" loading="lazy" alt="Sea and sky photograph"></button>
+        <button class="shot" type="button" data-slug="n24" data-cat="city" data-full="p/n24.jpg" data-title="City" data-exif="Pixel 6 · 24mm · f/1.9 · 1/1150s · ISO 45"><img src="t/n24.jpg" width="640" height="360" loading="lazy" alt="City photograph"></button>
+        <button class="shot" type="button" data-slug="o85" data-cat="utsav" data-full="p/o85.jpg" data-title="Utsav" data-exif=""><img src="t/o85.jpg" width="480" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="c13" data-cat="utsav" data-full="p/c13.jpg" data-title="Utsav" data-exif="Xiaomi 15 · 60mm · f/2 · 1/699s · ISO 50"><img src="t/c13.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="n40" data-cat="sea" data-full="p/n40.jpg" data-title="Sea and sky" data-exif=""><img src="t/n40.jpg" width="640" height="360" loading="lazy" alt="Sea and sky photograph"></button>
+        <button class="shot" type="button" data-slug="o131" data-cat="utsav" data-full="p/o131.jpg" data-title="Utsav" data-exif=""><img src="t/o131.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o116" data-cat="utsav" data-full="p/o116.jpg" data-title="Utsav" data-exif=""><img src="t/o116.jpg" width="361" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="c16" data-cat="utsav" data-full="p/c16.jpg" data-title="Utsav" data-exif="Xiaomi 15 · 23mm · f/1.6 · 1/50s · ISO 400"><img src="t/c16.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o63" data-cat="sea" data-full="p/o63.jpg" data-title="Sea and sky" data-exif="Xiaomi 15 · 1381mm · f/2 · 1/109s · ISO 80"><img src="t/o63.jpg" width="480" height="640" loading="lazy" alt="Sea and sky photograph"></button>
+        <button class="shot" type="button" data-slug="n35" data-cat="sea" data-full="p/n35.jpg" data-title="Sea and sky" data-exif=""><img src="t/n35.jpg" width="640" height="360" loading="lazy" alt="Sea and sky photograph"></button>
+        <button class="shot" type="button" data-slug="o51" data-cat="utsav" data-full="p/o51.jpg" data-title="Utsav" data-exif="Xiaomi 15 · 35mm · f/1.6 · 1/301s · ISO 50"><img src="t/o51.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="c17" data-cat="utsav" data-full="p/c17.jpg" data-title="Utsav" data-exif=""><img src="t/c17.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o37" data-cat="sea" data-full="p/o37.jpg" data-title="Sea and sky" data-exif="Xiaomi 15 · 60mm · f/2 · 1/430s · ISO 50"><img src="t/o37.jpg" width="360" height="640" loading="lazy" alt="Sea and sky photograph"></button>
+        <button class="shot" type="button" data-slug="o130" data-cat="utsav" data-full="p/o130.jpg" data-title="Utsav" data-exif=""><img src="t/o130.jpg" width="361" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o66" data-cat="sea" data-full="p/o66.jpg" data-title="Sea and sky" data-exif="Xiaomi 15 · 87mm · f/2 · 1/20s · ISO 800"><img src="t/o66.jpg" width="360" height="640" loading="lazy" alt="Sea and sky photograph"></button>
+        <button class="shot" type="button" data-slug="c18" data-cat="utsav" data-full="p/c18.jpg" data-title="Utsav" data-exif="Xiaomi 15 · 79mm · f/2 · 1/100s · ISO 320"><img src="t/c18.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o8" data-cat="utsav" data-full="p/o8.jpg" data-title="Utsav" data-exif=""><img src="t/o8.jpg" width="640" height="360" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o115" data-cat="utsav" data-full="p/o115.jpg" data-title="Utsav" data-exif=""><img src="t/o115.jpg" width="361" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o127" data-cat="utsav" data-full="p/o127.jpg" data-title="Utsav" data-exif=""><img src="t/o127.jpg" width="359" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="c19" data-cat="utsav" data-full="p/c19.jpg" data-title="Utsav" data-exif=""><img src="t/c19.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o50" data-cat="utsav" data-full="p/o50.jpg" data-title="Utsav" data-exif="Xiaomi 15 · 105mm · f/2 · 1/528s · ISO 50"><img src="t/o50.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="n31" data-cat="sea" data-full="p/n31.jpg" data-title="Sea and sky" data-exif=""><img src="t/n31.jpg" width="360" height="640" loading="lazy" alt="Sea and sky photograph"></button>
+        <button class="shot" type="button" data-slug="o120" data-cat="utsav" data-full="p/o120.jpg" data-title="Utsav" data-exif=""><img src="t/o120.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="c27" data-cat="utsav" data-full="p/c27.jpg" data-title="Utsav" data-exif="Xiaomi 15 · 60mm · f/2 · 1/926s · ISO 50"><img src="t/c27.jpg" width="640" height="360" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o125" data-cat="utsav" data-full="p/o125.jpg" data-title="Utsav" data-exif=""><img src="t/o125.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o69" data-cat="city" data-full="p/o69.jpg" data-title="City" data-exif="Pixel 6 · 24mm · f/1.9 · 1/1400s · ISO 43"><img src="t/o69.jpg" width="360" height="640" loading="lazy" alt="City photograph"></button>
+        <button class="shot" type="button" data-slug="o114" data-cat="utsav" data-full="p/o114.jpg" data-title="Utsav" data-exif=""><img src="t/o114.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="c28" data-cat="utsav" data-full="p/c28.jpg" data-title="Utsav" data-exif="Xiaomi 15 · 120mm · f/2 · 1/100s · ISO 160"><img src="t/c28.jpg" width="640" height="360" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o74" data-cat="city" data-full="p/o74.jpg" data-title="City" data-exif="Pixel 6 · 24mm · f/1.9 · 1/310s · ISO 152"><img src="t/o74.jpg" width="360" height="640" loading="lazy" alt="City photograph"></button>
+        <button class="shot" type="button" data-slug="o26" data-cat="utsav" data-full="p/o26.jpg" data-title="Utsav" data-exif="Galaxy S24 · 69mm · f/2.4 · 1/640s · ISO 25"><img src="t/o26.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="n25" data-cat="city" data-full="p/n25.jpg" data-title="City" data-exif="Pixel 6 · 24mm · f/1.9 · 1/3200s · ISO 46"><img src="t/n25.jpg" width="360" height="640" loading="lazy" alt="City photograph"></button>
+        <button class="shot" type="button" data-slug="c29" data-cat="utsav" data-full="p/c29.jpg" data-title="Utsav" data-exif="Xiaomi 15 · 60mm · f/2 · 1/498s · ISO 50"><img src="t/c29.jpg" width="640" height="360" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o67" data-cat="utsav" data-full="p/o67.jpg" data-title="Utsav" data-exif=""><img src="t/o67.jpg" width="640" height="409" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o95" data-cat="utsav" data-full="p/o95.jpg" data-title="Utsav" data-exif=""><img src="t/o95.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o9" data-cat="utsav" data-full="p/o9.jpg" data-title="Utsav" data-exif=""><img src="t/o9.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="c31" data-cat="utsav" data-full="p/c31.jpg" data-title="Utsav" data-exif=""><img src="t/c31.jpg" width="363" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o102" data-cat="utsav" data-full="p/o102.jpg" data-title="Utsav" data-exif=""><img src="t/o102.jpg" width="480" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="n17" data-cat="sea" data-full="p/n17.jpg" data-title="Sea and sky" data-exif=""><img src="t/n17.jpg" width="640" height="363" loading="lazy" alt="Sea and sky photograph"></button>
+        <button class="shot" type="button" data-slug="o57" data-cat="city" data-full="p/o57.jpg" data-title="City" data-exif="Xiaomi 15 · 120mm · f/2 · 1/37s · ISO 1250"><img src="t/o57.jpg" width="360" height="640" loading="lazy" alt="City photograph"></button>
+        <button class="shot" type="button" data-slug="c32" data-cat="utsav" data-full="p/c32.jpg" data-title="Utsav" data-exif=""><img src="t/c32.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o16" data-cat="utsav" data-full="p/o16.jpg" data-title="Utsav" data-exif=""><img src="t/o16.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o97" data-cat="utsav" data-full="p/o97.jpg" data-title="Utsav" data-exif=""><img src="t/o97.jpg" width="640" height="360" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o103" data-cat="utsav" data-full="p/o103.jpg" data-title="Utsav" data-exif=""><img src="t/o103.jpg" width="480" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="c33" data-cat="utsav" data-full="p/c33.jpg" data-title="Utsav" data-exif=""><img src="t/c33.jpg" width="359" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o22" data-cat="utsav" data-full="p/o22.jpg" data-title="Utsav" data-exif=""><img src="t/o22.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o11" data-cat="utsav" data-full="p/o11.jpg" data-title="Utsav" data-exif=""><img src="t/o11.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o53" data-cat="utsav" data-full="p/o53.jpg" data-title="Utsav" data-exif="Xiaomi 15 · 120mm · f/2 · 1/513s · ISO 50"><img src="t/o53.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o128" data-cat="utsav" data-full="p/o128.jpg" data-title="Utsav" data-exif=""><img src="t/o128.jpg" width="361" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o14" data-cat="utsav" data-full="p/o14.jpg" data-title="Utsav" data-exif=""><img src="t/o14.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="n28" data-cat="city" data-full="p/n28.jpg" data-title="City" data-exif=""><img src="t/n28.jpg" width="640" height="360" loading="lazy" alt="City photograph"></button>
+        <button class="shot" type="button" data-slug="o83" data-cat="city" data-full="p/o83.jpg" data-title="City" data-exif=""><img src="t/o83.jpg" width="360" height="640" loading="lazy" alt="City photograph"></button>
+        <button class="shot" type="button" data-slug="o24" data-cat="utsav" data-full="p/o24.jpg" data-title="Utsav" data-exif=""><img src="t/o24.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o137" data-cat="sea" data-full="p/o137.jpg" data-title="Sea and sky" data-exif=""><img src="t/o137.jpg" width="361" height="640" loading="lazy" alt="Sea and sky photograph"></button>
+        <button class="shot" type="button" data-slug="o17" data-cat="utsav" data-full="p/o17.jpg" data-title="Utsav" data-exif=""><img src="t/o17.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o13" data-cat="utsav" data-full="p/o13.jpg" data-title="Utsav" data-exif=""><img src="t/o13.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o90" data-cat="utsav" data-full="p/o90.jpg" data-title="Utsav" data-exif=""><img src="t/o90.jpg" width="480" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o38" data-cat="utsav" data-full="p/o38.jpg" data-title="Utsav" data-exif="Xiaomi 15 · 60mm · f/2 · 1/240s · ISO 50"><img src="t/o38.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+        <button class="shot" type="button" data-slug="o76" data-cat="utsav" data-full="p/o76.jpg" data-title="Utsav" data-exif="Pixel 6 · 24mm · f/1.9 · 1/100s · ISO 112"><img src="t/o76.jpg" width="360" height="640" loading="lazy" alt="Utsav photograph"></button>
+      </div>
+    </div>
+  </section>
+
+  <section id="app">
+    <div class="ghost" data-speed=".16" aria-hidden="true">camera camera</div>
+    <div class="wrap app">
+      <div>
+        <p class="mono rv" style="margin:0">My own camera app, for Android</p>
+        <h2 class="rv">Pranad <i>Camera</i></h2>
+        <p class="rv">Pick a look, slide the zoom, press the shutter. Try it on the phone.</p>
+        <ul class="feat">
+          <li class="rv">Looks <span>RED, FX3, FX6, iPhone, Leica, Film, Cinema</span></li>
+          <li class="rv" style="--d:.1s">Zoom <span>A wheel under your thumb</span></li>
+          <li class="rv" style="--d:.2s">Modes <span>Photo and video</span></li>
+        </ul>
+        <!-- DOWNLOAD LINK: replace the .soon block with <a class="pill hot lg" href="APK_URL">Download the APK</a> -->
+        <a class="pill chrome lg mag" href="https://drive.google.com/file/d/1NsUJLAyalUGgMJxbWEKOyUOx7CHbo6jV/view?usp=sharing" target="_blank" rel="noopener" data-cursor="GET">Download the app (APK, 55 MB)</a>
+      </div>
+      <div class="rv">
+        <div class="floaty"><div class="phone" id="phone">
+          <div class="screen">
+            <div class="view" id="view">
+              <img id="vImg" src="t/phone.jpg" alt="Camera preview showing a small boat on a grey sea">
+              <div class="lb1"></div><div class="lb2"></div>
+              <div class="flash" id="flash"></div>
+              <div class="tag" id="vTag">RED</div>
+            </div>
+            <div class="deck">
+              <div class="looks" id="looks" role="group" aria-label="Choose a look">
+                <button class="look" type="button" aria-pressed="true" data-k="RED">RED</button>
+                <button class="look" type="button" aria-pressed="false" data-k="FX3">FX3</button>
+                <button class="look" type="button" aria-pressed="false" data-k="FX6">FX6</button>
+                <button class="look" type="button" aria-pressed="false" data-k="iPHONE">iPHONE</button>
+                <button class="look" type="button" aria-pressed="false" data-k="LEICA">LEICA</button>
+                <button class="look" type="button" aria-pressed="false" data-k="FILM">FILM</button>
+                <button class="look" type="button" aria-pressed="false" data-k="CINEMA">CINEMA</button>
+              </div>
+              <label class="zoom" for="zoomR">ZOOM <input id="zoomR" type="range" min="1" max="5" step="0.1" value="1"> <output id="zoomO" for="zoomR">1.0x</output></label>
+              <button class="shutter" id="shutter" type="button" aria-label="Shutter"></button>
+            </div>
+          </div>
+        </div></div>
+        <p class="mono note">Simulated preview of the looks</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="about" style="padding-top:0">
+    <div class="wrap about">
+      <div>
+        <p class="mono rv" style="margin:0">So far</p>
+        <p class="say rv"><span class="count" data-count="125">125</span> frames and <span class="count" data-count="20">20</span> clips, with more on <i>Instagram</i>.</p>
+      </div>
+      <dl class="facts">
+        <div class="rv"><dt>Based in</dt><dd>Mumbai</dd></div>
+        <div class="rv" style="--d:.1s"><dt>Shot on</dt><dd>Nikon Coolpix B700, Pixel 6, Xiaomi 15</dd></div>
+        <div class="rv" style="--d:.2s"><dt>Prints and shoots</dt><dd>Message on Instagram</dd></div>
+      </dl>
+    </div>
+  </section>
+
+  <div class="end">
+    <div class="wrap">
+      <p class="mono" style="margin:0 0 18px">Tap the name to open Instagram</p>
+      <a class="liq mag" href="https://www.instagram.com/pranad_clicks/" target="_blank" rel="noopener" data-cursor="INSTA" aria-label="Pranad on Instagram"><canvas class="lqbig" aria-hidden="true"></canvas><span>Pranad</span></a>
+      <p class="mono">All photographs by Pranad</p>
+    </div>
+  </div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<div class="lb" id="lb" role="dialog" aria-modal="true" aria-label="Photo viewer">
+  <div class="lb-top"><span class="mono" id="lbCount"></span><button class="round" id="lbClose" type="button" aria-label="Close">&#10005;</button></div>
+  <div class="lb-stage"><img id="lbImg" alt=""><video id="lbVid" muted loop playsinline controls></video></div>
+  <div class="lb-bot">
+    <div class="lb-title" id="lbTitle"></div>
+    <div class="lb-nav">
+      <button class="round" id="lbPrev" type="button" aria-label="Previous photo">&#8592;</button>
+      <button class="round" id="lbNext" type="button" aria-label="Next photo">&#8594;</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+var fine = matchMedia('(hover:hover) and (pointer:fine)').matches;
+var $ = function(id){return document.getElementById(id)};
+
+/* ---------- viewer ---------- */
+var shots=[].slice.call(document.querySelectorAll('.shot'));
+var lb=$('lb'), lbImg=$('lbImg'), lbTitle=$('lbTitle'), lbCount=$('lbCount');
+var list=[], li=0, lastFocus=null;
+var lbVid=$('lbVid'),lenis=null;
+function lbShow(){
+  var s=list[li],vid=s.dataset.type==='video';
+  lbImg.style.display=vid?'none':'';lbVid.style.display=vid?'block':'none';
+  if(vid){lbImg.removeAttribute('src');lbVid.src=s.dataset.full;lbVid.poster=s.dataset.poster||'';var pr=lbVid.play();if(pr&&pr.catch)pr.catch(function(){})}
+  else{lbVid.pause();lbVid.removeAttribute('src');lbImg.src=s.dataset.full;lbImg.alt=s.dataset.title}
+  lbTitle.textContent=s.dataset.title;
+  var sm=document.createElement('small'); sm.textContent=s.dataset.exif||'Pranad'; lbTitle.appendChild(sm);
+  lbCount.textContent=String(li+1).padStart(2,'0')+' / '+String(list.length).padStart(2,'0');
+}
+function lbOpen(s,from,custom){
+  list=custom||shots.filter(function(x){return !x.hidden});
+  li=list.indexOf(s); if(li<0){list=shots.slice(); li=list.indexOf(s);}
+  lastFocus=from||s; lbShow(); lb.classList.add('open'); document.body.style.overflow='hidden'; if(lenis)lenis.stop(); $('lbClose').focus();
+}
+function lbClose(){lb.classList.remove('open');document.body.style.overflow='';lbImg.removeAttribute('src');lbVid.pause();lbVid.removeAttribute('src');if(lenis)lenis.start();if(lastFocus)lastFocus.focus()}
+function lbStep(d){li=(li+d+list.length)%list.length;lbShow()}
+shots.forEach(function(s){s.addEventListener('click',function(){lbOpen(s)})});
+$('lbClose').onclick=lbClose; $('lbPrev').onclick=function(){lbStep(-1)}; $('lbNext').onclick=function(){lbStep(1)};
+lb.addEventListener('click',function(e){if(e.target===lb||e.target.classList.contains('lb-stage'))lbClose()});
+document.addEventListener('keydown',function(e){
+  if(!lb.classList.contains('open'))return;
+  if(e.key==='Escape')lbClose(); else if(e.key==='ArrowLeft')lbStep(-1); else if(e.key==='ArrowRight')lbStep(1);
+});
+var sx=null;
+lb.addEventListener('touchstart',function(e){sx=e.touches[0].clientX},{passive:true});
+lb.addEventListener('touchend',function(e){if(sx===null)return;var dx=e.changedTouches[0].clientX-sx;sx=null;if(Math.abs(dx)>50)lbStep(dx<0?1:-1)},{passive:true});
+
+/* ---------- smooth scrolling ---------- */
+if(window.Lenis&&!reduce){try{
+  document.documentElement.style.scrollBehavior='auto';
+  lenis=new Lenis({lerp:.085,wheelMultiplier:1,smoothWheel:true});
+  (function r(t){lenis.raf(t);requestAnimationFrame(r)})(performance.now());
+  [].forEach.call(document.querySelectorAll('a[href^="#"]'),function(a){a.addEventListener('click',function(e){var t=document.querySelector(a.getAttribute('href'));if(t){e.preventDefault();lenis.scrollTo(t,{offset:-30,duration:1.4})}})});
+}catch(e){lenis=null}}
+
+/* ---------- scroll engine: progress, velocity, reveals, ghosts, scrub ---------- */
+var SV=0,lastY=scrollY,prog=$('prog'),ghosts=[].slice.call(document.querySelectorAll('.ghost'));
+var scrub=$('scrub'),words=[];
+(function(){var parts=scrub.textContent.split(' ');scrub.textContent='';parts.forEach(function(w,i){var sp=document.createElement('span');
+  if(w.charAt(0)==='*'){w=w.slice(1);sp.className='g'}sp.textContent=w;scrub.appendChild(sp);if(i<parts.length-1)scrub.appendChild(document.createTextNode(' '));words.push(sp)})})();
+if(reduce)words.forEach(function(w){w.classList.add('lit')});
+var heroLayers=[].slice.call(document.querySelectorAll('.hero .still,.hero canvas'));
+function onFrame(){
+  var y=scrollY;SV=SV*.86+(y-lastY)*.14;lastY=y;
+  var max=document.documentElement.scrollHeight-innerHeight;prog.style.width=(max>0?y/max*100:0)+'%';
+  if(!reduce){
+    if(y<innerHeight*1.2)heroLayers.forEach(function(l){l.style.transform='translate3d(0,'+(y*.28).toFixed(1)+'px,0) scale('+(1+y*.0002).toFixed(4)+')'});
+    ghosts.forEach(function(g){var r=g.parentNode.getBoundingClientRect();if(r.bottom<0||r.top>innerHeight)return;
+      g.style.transform='translate3d('+((r.top-innerHeight*.5)*parseFloat(g.dataset.speed)).toFixed(1)+'px,0,0)'});
+    var r=scrub.getBoundingClientRect(),p=(innerHeight*.82-r.top)/(r.height+innerHeight*.35);
+    for(var i=0;i<words.length;i++)words[i].classList.toggle('lit',i/words.length<p);
+  }
+  requestAnimationFrame(onFrame);
+}
+requestAnimationFrame(onFrame);
+var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{rootMargin:'0px 0px -8% 0px'});
+[].forEach.call(document.querySelectorAll('.rv,.shot'),function(el){io.observe(el)});
+var cio=new IntersectionObserver(function(es){es.forEach(function(e){if(!e.isIntersecting)return;cio.unobserve(e.target);
+  var el=e.target,n=+el.dataset.count,t0=performance.now();if(reduce){el.textContent=n;return}
+  (function c(t){var k=Math.min(1,(t-t0)/1400);el.textContent=Math.round(n*(1-Math.pow(1-k,3)));if(k<1)requestAnimationFrame(c)})(t0)})});
+[].forEach.call(document.querySelectorAll('[data-count]'),function(el){cio.observe(el)});
+
+/* ---------- camera rolls ---------- */
+(function(){
+  var film=$('film'),cans=[].slice.call(document.querySelectorAll('.can')),strips=[].slice.call(film.querySelectorAll('.strip'));
+  var name=$('rollName'),info=$('rollInfo'),vis=false,active=null,o={x:0,sp:1,hov:false,drag:false,moved:0,px:0};
+  function vids(on){[].forEach.call(film.querySelectorAll('video'),function(v){var want=on&&active&&active.contains(v);
+    if(want){var r=v.getBoundingClientRect();want=r.right>-200&&r.left<innerWidth+200}
+    if(want){if(v.paused){var p=v.play();if(p&&p.catch)p.catch(function(){})}}else if(!v.paused)v.pause()})}
+  function pick(k){cans.forEach(function(c){c.setAttribute('aria-pressed',c.dataset.roll===k?'true':'false')});
+    strips.forEach(function(st){var on=st.dataset.roll===k;st.classList.toggle('on',on);if(on)active=st});
+    var c=cans.filter(function(c){return c.dataset.roll===k})[0];name.textContent=c.dataset.name;info.textContent=c.dataset.info;o.x=0;film.style.setProperty('--glow',getComputedStyle(c).getPropertyValue('--c'))}
+  cans.forEach(function(c){c.addEventListener('click',function(){pick(c.dataset.roll)});
+    c.addEventListener('pointermove',function(e){var r=c.getBoundingClientRect();c.style.setProperty('--mx',((e.clientX-r.left)/r.width*100).toFixed(0)+'%');c.style.setProperty('--my',((e.clientY-r.top)/r.height*100).toFixed(0)+'%')})});
+  pick(cans[0].dataset.roll);
+  new IntersectionObserver(function(e){vis=e[0].isIntersecting;if(!vis)vids(false)},{rootMargin:'120px'}).observe(film);
+  film.addEventListener('pointerenter',function(){o.hov=true});film.addEventListener('pointerleave',function(){o.hov=false});
+  film.addEventListener('pointerdown',function(e){o.drag=true;o.moved=0;o.px=e.clientX;film.style.cursor='grabbing'});
+  addEventListener('pointermove',function(e){if(!o.drag)return;var dx=e.clientX-o.px;o.px=e.clientX;o.moved+=Math.abs(dx);o.x+=dx},{passive:true});
+  function up(e){if(!o.drag)return;o.drag=false;film.style.cursor='';if(o.moved<6){var b=e.target.closest&&e.target.closest('.tile');if(b)open(b)}}
+  addEventListener('pointerup',up);addEventListener('pointercancel',function(){o.drag=false;film.style.cursor=''});
+  function open(b){var uniq=[].slice.call(active.querySelectorAll('.tile:not([aria-hidden])'));var t=uniq.filter(function(x){return x.dataset.full===b.dataset.full})[0]||b;lbOpen(t,b,uniq)}
+  film.addEventListener('keydown',function(e){if(e.key==='Enter'){var b=e.target.closest('.tile');if(b)open(b)}});
+  var n=0;
+  (function loop(){
+    if(vis&&active){var t=active.firstElementChild,half=t.scrollWidth/2;
+      if(half){if(!o.drag&&!reduce){o.sp+=((o.hov?0:1)-o.sp)*.07;o.x-=.7*o.sp+SV*.4}
+        while(o.x<=-half)o.x+=half;while(o.x>0)o.x-=half;
+        t.style.transform='translate3d('+o.x.toFixed(1)+'px,0,0)';film.style.setProperty('--fx',(o.x%30).toFixed(1)+'px')}
+      if(++n%20===0)vids(true)}
+    requestAnimationFrame(loop)})();
+})();
+
+[].forEach.call(document.querySelectorAll('.chrome,.round'),function(c){c.addEventListener('pointermove',function(e){var r=c.getBoundingClientRect();c.style.animationPlayState='paused';c.style.setProperty('--bx',((e.clientX-r.left)/r.width*100).toFixed(0)+'%')});
+  c.addEventListener('pointerleave',function(){c.style.animationPlayState=''})});
+
+/* ---------- liquid metal (one shader, painted into every chrome control) ---------- */
+(function(){
+  var src=document.createElement('canvas');src.width=512;src.height=256;var g=null;
+  try{g=src.getContext('webgl',{preserveDrawingBuffer:true,antialias:false})}catch(e){}
+  if(!g)return;
+  function sh(t,c){var s=g.createShader(t);g.shaderSource(s,c);g.compileShader(s);return g.getShaderParameter(s,g.COMPILE_STATUS)?s:null}
+  var vs=sh(g.VERTEX_SHADER,'attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}');
+  var fs=sh(g.FRAGMENT_SHADER,'precision highp float;uniform float t;void main(){vec2 uv=gl_FragCoord.xy/vec2(512.,256.);vec2 p=uv*vec2(5.,2.5);'+
+    'for(int i=1;i<6;i++){float f=float(i);p+=vec2(.75/f*sin(f*p.y*1.35+t*.55+f*1.7),.75/f*cos(f*p.x*1.15+t*.42+f*2.3));}'+
+    'float v=.5+.5*sin(p.x*1.25+p.y*1.6);float c=pow(abs(sin(v*8.5)),.5);'+
+    'vec3 col=mix(vec3(.02,.025,.04),vec3(1.),c);col*=.72+.28*sin(p.y*1.7+t*.6);'+
+    'col+=.09*cos(6.2832*(v*1.5+vec3(0.,.33,.67)))*c;gl_FragColor=vec4(col,1.);}');
+  if(!vs||!fs)return;var pr=g.createProgram();g.attachShader(pr,vs);g.attachShader(pr,fs);g.linkProgram(pr);if(!g.getProgramParameter(pr,g.LINK_STATUS))return;
+  g.useProgram(pr);var b=g.createBuffer();g.bindBuffer(g.ARRAY_BUFFER,b);g.bufferData(g.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),g.STATIC_DRAW);
+  var loc=g.getAttribLocation(pr,'p');g.enableVertexAttribArray(loc);g.vertexAttribPointer(loc,2,g.FLOAT,false,0,0);var ut=g.getUniformLocation(pr,'t');
+  var T=[];
+  [].forEach.call(document.querySelectorAll('.chrome,.round,.chip'),function(el,i){var c=document.createElement('canvas');c.className='lq';c.setAttribute('aria-hidden','true');el.insertBefore(c,el.firstChild);
+    var o={el:el,c:c,x:c.getContext('2d'),vis:false,off:i*61,sp:.25,hov:false,big:false};T.push(o);
+    el.addEventListener('pointerenter',function(){o.hov=true});el.addEventListener('pointerleave',function(){o.hov=false})});
+  [].forEach.call(document.querySelectorAll('.lqbig'),function(c){var el=c.parentNode,o={el:el,c:c,x:c.getContext('2d'),vis:false,off:0,sp:.5,hov:false,big:true};T.push(o);
+    el.addEventListener('pointerenter',function(){o.hov=true});el.addEventListener('pointerleave',function(){o.hov=false})});
+  var io2=new IntersectionObserver(function(es){es.forEach(function(e){for(var i=0;i<T.length;i++)if(T[i].el===e.target)T[i].vis=e.isIntersecting})});
+  T.forEach(function(o){io2.observe(o.el)});
+  document.documentElement.classList.add('lq-on');
+  var t0=performance.now();
+  (function loop(now){
+    var any=false;for(var i=0;i<T.length;i++)if(T[i].vis){any=true;break}
+    if(any&&!document.hidden){
+      g.uniform1f(ut,reduce?3.:(now-t0)/1000);g.drawArrays(g.TRIANGLE_STRIP,0,4);
+      for(i=0;i<T.length;i++){var o=T[i];if(!o.vis)continue;
+        var w=o.el.clientWidth,h=o.el.clientHeight;if(!w||!h)continue;var d=Math.min(devicePixelRatio||1,2),W=Math.round(w*d),H=Math.round(h*d);
+        if(o.c.width!==W||o.c.height!==H){o.c.width=W;o.c.height=H}
+        var shh=o.big?256:Math.min(256,90),sw=Math.min(512,shh*w/h);if(sw===512)shh=Math.min(256,512*h/w);
+        o.sp+=((o.hov?2.2:.25)-o.sp)*.06;if(!reduce)o.off+=o.sp;
+        var sx=o.big?0:Math.abs(((o.off)%(2*(512-sw+1)))-(512-sw+1));
+        o.x.drawImage(src,Math.min(512-sw,sx),o.big?0:(i*37)%(256-shh+1),sw,shh,0,0,W,H)}
+    }
+    requestAnimationFrame(loop)})(t0);
+})();
+
+/* ---------- 3D chrome canisters ---------- */
+(function(){
+  var host=$('cans3d');if(!window.THREE||!host)return;
+  var cv=host.querySelector('canvas'),btns=[].slice.call(document.querySelectorAll('.can')),R;
+  try{R=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true,powerPreference:'high-performance'})}catch(e){return}
+  R.setPixelRatio(Math.min(devicePixelRatio||1,2));R.outputEncoding=THREE.sRGBEncoding;R.toneMapping=THREE.ACESFilmicToneMapping;R.toneMappingExposure=1.25;
+  var scene=new THREE.Scene(),cam=new THREE.PerspectiveCamera(26,2,.1,60);
+  /* a small photo studio for the metal to reflect */
+  var ec=document.createElement('canvas');ec.width=1024;ec.height=512;var ex=ec.getContext('2d');
+  ex.fillStyle='#030304';ex.fillRect(0,0,1024,512);
+  function box(x,y,w,h,a){var gr=ex.createLinearGradient(x,y,x+w,y);gr.addColorStop(0,'rgba(255,255,255,0)');gr.addColorStop(.18,'rgba(255,255,255,'+a+')');gr.addColorStop(.82,'rgba(255,255,255,'+a+')');gr.addColorStop(1,'rgba(255,255,255,0)');ex.fillStyle=gr;ex.fillRect(x,y,w,h)}
+  box(60,90,150,300,1);box(300,40,60,420,.9);box(470,150,220,120,1);box(760,60,90,380,.95);box(930,200,70,200,.7);
+  var hg=ex.createLinearGradient(0,0,0,512);hg.addColorStop(0,'rgba(255,255,255,.55)');hg.addColorStop(.16,'rgba(255,255,255,0)');hg.addColorStop(.84,'rgba(120,130,150,0)');hg.addColorStop(1,'rgba(120,130,150,.35)');ex.fillStyle=hg;ex.fillRect(0,0,1024,512);
+  var et=new THREE.CanvasTexture(ec);et.mapping=THREE.EquirectangularReflectionMapping;et.encoding=THREE.sRGBEncoding;
+  var pm=new THREE.PMREMGenerator(R);scene.environment=pm.fromEquirectangular(et).texture;et.dispose();pm.dispose();
+  var chrome=new THREE.MeshStandardMaterial({color:0xffffff,metalness:1,roughness:.06});
+  var steel=new THREE.MeshStandardMaterial({color:0x8d939c,metalness:1,roughness:.24});
+  var dark=new THREE.MeshStandardMaterial({color:0x17181b,metalness:1,roughness:.32});
+  var filmM=new THREE.MeshStandardMaterial({color:0x2a2018,metalness:.3,roughness:.35});
+  var cyl=function(r,h,m,open){return new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,96,1,!!open),m)};
+  function labelTex(name,info){var c=document.createElement('canvas');c.width=1536;c.height=384;var x=c.getContext('2d');
+    var bg=x.createLinearGradient(0,0,0,384);bg.addColorStop(0,'#101114');bg.addColorStop(1,'#050506');x.fillStyle=bg;x.fillRect(0,0,1536,384);
+    x.fillStyle='rgba(255,255,255,.55)';x.fillRect(0,14,1536,3);x.fillRect(0,367,1536,3);
+    x.textAlign='center';x.textBaseline='middle';
+    for(var k=0;k<2;k++){var cx=384+k*768;x.fillStyle='#fff';x.font='italic 150px "Instrument Serif", Georgia, serif';x.fillText(name,cx,165,700);
+      x.fillStyle='rgba(255,255,255,.62)';x.font='500 38px "JetBrains Mono", monospace';x.fillText(info.toUpperCase().split('').join('\u200a'),cx,292,700)}
+    var t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;t.anisotropy=R.capabilities.getMaxAnisotropy();return t}
+  var cans=btns.map(function(b,i){
+    var gp=new THREE.Group(),inner=new THREE.Group();gp.add(inner);
+    inner.add(cyl(.5,1.3,chrome));
+    var lm=new THREE.MeshStandardMaterial({metalness:.75,roughness:.3,map:labelTex(b.dataset.name,b.dataset.info)});
+    var lab=cyl(.508,.74,lm,true);inner.add(lab);
+    [.66,-.66].forEach(function(y){var r=cyl(.525,.05,steel);r.position.y=y;inner.add(r);var c2=cyl(.47,.12,dark);c2.position.y=y*1.13;inner.add(c2)});
+    var k1=cyl(.17,.2,steel);k1.position.y=.86;inner.add(k1);var k2=cyl(.1,.1,chrome);k2.position.y=.98;inner.add(k2);var k3=cyl(.17,.08,steel);k3.position.y=-.82;inner.add(k3);
+    var lip=new THREE.Mesh(new THREE.BoxGeometry(.5,.8,.018),filmM);lip.position.set(.72,0,0);var lg=new THREE.Group();lg.add(lip);lg.scale.x=.001;inner.add(lg);
+    scene.add(gp);
+    document.fonts&&document.fonts.load('italic 150px "Instrument Serif"').then(function(){lm.map.dispose();lm.map=labelTex(b.dataset.name,b.dataset.info);lm.needsUpdate=true});
+    return {b:b,g:gp,inner:inner,lip:lg,rot:i*1.3,vel:0,s:1,y:0,hov:false}});
+  var N=cans.length,GAP=1.5,W=0,H=0;
+  function layout(){W=host.clientWidth;H=host.clientHeight;R.setSize(W,H,false);cam.aspect=W/H;
+    var narrow=W<620,cols=narrow?3:N;
+    cans.forEach(function(c,i){if(narrow){var row=i<3?0:1,n=row?N-3:3,j=row?i-3:i;c.bx=(j-(n-1)/2)*GAP;c.by=row?-1.15:1.15}else{c.bx=(i-(N-1)/2)*GAP;c.by=0}});
+    var spanX=cols*GAP+.5,spanY=narrow?4.9:2.75,v=cam.fov*Math.PI/180;
+    var zH=(spanY/2)/Math.tan(v/2),zW=(spanX/2)/(Math.tan(v/2)*cam.aspect);cam.position.set(0,0,Math.max(zH,zW));cam.updateProjectionMatrix()}
+  document.documentElement.classList.add('c3d');
+  host.style.height='';layout();if(W<620){host.style.height=Math.round(W*1.12)+'px';layout()}
+  addEventListener('resize',function(){host.style.height='';layout();if(W<620){host.style.height=Math.round(W*1.12)+'px';layout()}});
+  var ray=new THREE.Raycaster(),m=new THREE.Vector2(9,9),mx=0,my=0,down=null,vis=false;
+  function hit(e){var r=cv.getBoundingClientRect();m.x=(e.clientX-r.left)/r.width*2-1;m.y=-((e.clientY-r.top)/r.height*2-1);mx=m.x;my=m.y;ray.setFromCamera(m,cam);
+    var best=null,bd=1e9;cans.forEach(function(c){var h=ray.intersectObject(c.g,true);if(h.length&&h[0].distance<bd){bd=h[0].distance;best=c}});return best}
+  cv.addEventListener('pointermove',function(e){var c=hit(e);cans.forEach(function(k){k.hov=k===c});cv.style.cursor=c?'pointer':'';
+    if(down&&down.c){var dx=e.clientX-down.x;down.x=e.clientX;down.moved+=Math.abs(dx);down.c.vel+=dx*.004}});
+  cv.addEventListener('pointerleave',function(){cans.forEach(function(k){k.hov=false});mx=my=0;down=null});
+  cv.addEventListener('pointerdown',function(e){down={c:hit(e),x:e.clientX,moved:0}});
+  cv.addEventListener('pointerup',function(e){var c=hit(e);if(down&&down.c&&down.c===c&&down.moved<8)c.b.click();down=null});
+  new IntersectionObserver(function(e){vis=e[0].isIntersecting},{rootMargin:'80px'}).observe(host);
+  document.documentElement.classList.add('c3d');
+  var t0=performance.now();
+  (function loop(now){requestAnimationFrame(loop);if(!vis||document.hidden)return;var t=(now-t0)/1000;
+    cans.forEach(function(c,i){var sel=c.b.getAttribute('aria-pressed')==='true';
+      if(!reduce)c.rot+=(sel?.014:.004)+c.vel+SV*.004;c.vel*=.94;
+      var ts=sel?1.16:c.hov?1.08:1;c.s+=(ts-c.s)*.1;c.y+=((sel?.16:0)+(c.hov?.06:0)-c.y)*.1;
+      c.g.position.set(c.bx,c.by+c.y+(reduce?0:Math.sin(t*1.1+i)*.035),0);c.g.scale.setScalar(c.s);
+      c.inner.rotation.y=c.rot;c.g.rotation.z+=((-mx*.1-(c.hov?.06:0))-c.g.rotation.z)*.08;c.g.rotation.x+=((my*-.14+.1)-c.g.rotation.x)*.08;
+      c.lip.scale.x+=((sel?1:.001)-c.lip.scale.x)*.1});
+    R.render(scene,cam)})(t0);
+})();
+
+/* ---------- magnets ---------- */
+if(fine&&!reduce)[].forEach.call(document.querySelectorAll('.mag'),function(m){
+  m.addEventListener('pointermove',function(e){var r=m.getBoundingClientRect();m.style.transform='translate('+((e.clientX-r.left-r.width/2)*.22).toFixed(1)+'px,'+((e.clientY-r.top-r.height/2)*.3).toFixed(1)+'px)'});
+  m.addEventListener('pointerleave',function(){m.style.transform=''})});
+
+/* ---------- filters + tilt ---------- */
+var chips=[].slice.call(document.querySelectorAll('.chip'));
+chips.forEach(function(c){c.onclick=function(){
+  chips.forEach(function(x){x.setAttribute('aria-pressed',x===c?'true':'false')});
+  shots.forEach(function(s){s.hidden=!(c.dataset.f==='all'||s.dataset.cat===c.dataset.f)});
+}});
+if(fine&&!reduce){shots.forEach(function(s){
+  s.addEventListener('pointermove',function(e){
+    var r=s.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;
+    s.style.setProperty('--ry',((x-.5)*12).toFixed(2)+'deg'); s.style.setProperty('--rx',((.5-y)*12).toFixed(2)+'deg');
+    s.style.setProperty('--mx',(x*100).toFixed(1)+'%'); s.style.setProperty('--my',(y*100).toFixed(1)+'%');
+  });
+  s.addEventListener('pointerleave',function(){s.style.setProperty('--ry','0deg');s.style.setProperty('--rx','0deg')});
+})}
+
+/* ---------- ink buttons + cursor ---------- */
+[].forEach.call(document.querySelectorAll('.pill'),function(p){p.addEventListener('pointermove',function(e){
+  var r=p.getBoundingClientRect();p.style.setProperty('--x',(e.clientX-r.left)+'px');p.style.setProperty('--y',(e.clientY-r.top)+'px');
+})});
+if(fine){
+  var cur=$('cursor'),torch=$('torch'),cl=cur.firstChild,cx=-100,cy=-100,tx=-100,ty=-100,qx=-999,qy=-999;
+  addEventListener('pointermove',function(e){tx=e.clientX;ty=e.clientY;
+    var t=e.target.closest&&e.target.closest('[data-cursor],.shot,a,button,input');
+    var lab=t?(t.dataset.cursor||(t.classList.contains('shot')?'VIEW':'')):'';
+    cl.textContent=lab; cur.classList.toggle('big',!!lab); cur.classList.toggle('link',!!t&&!lab);
+  },{passive:true});
+  (function loop(){cx+=(tx-cx)*.22;cy+=(ty-cy)*.22;cur.style.transform='translate('+cx.toFixed(1)+'px,'+cy.toFixed(1)+'px)';qx+=(tx-qx)*.07;qy+=(ty-qy)*.07;torch.style.transform='translate3d('+qx.toFixed(1)+'px,'+qy.toFixed(1)+'px,0)';requestAnimationFrame(loop)})();
+}
+
+/* ---------- the ring ---------- */
+(function(){
+  var stage=$('stage'),ring=$('ring'),panels=[].slice.call(ring.children),N=panels.length,step=360/N;
+  var ang=0,vel=0,target=null,drag=false,px=0,moved=0,R=0,vis=false,now=$('ringNow');
+  function size(){var w=panels[0].offsetWidth;R=Math.round((w/2)/Math.tan(Math.PI/N)+w*.16);
+    panels.forEach(function(p,i){p.style.transform='rotateY('+(i*step)+'deg) translateZ('+R+'px)'})}
+  size(); addEventListener('resize',size);
+  function front(){return ((Math.round(-ang/step)%N)+N)%N}
+  function paint(){
+    ring.style.transform='translateZ('+(-R)+'px) rotateY('+ang.toFixed(2)+'deg)';
+    for(var i=0;i<N;i++){var a=((i*step+ang)%360+540)%360-180;panels[i].style.setProperty('--shade',Math.min(.82,Math.abs(a)/95).toFixed(2))}
+    var f=panels[front()];now.textContent=String(front()+1).padStart(2,'0')+' / '+String(N).padStart(2,'0')+'  '+f.dataset.title;
+  }
+  function tick(){
+    if(vis){
+      if(drag){}
+      else if(target!==null){ang+=(target-ang)*.12;if(Math.abs(target-ang)<.05){ang=target;target=null}}
+      else{ang+=vel;vel*=.95;if(!reduce){ang-=SV*.06;if(Math.abs(vel)<.08)ang-=.07}}
+      paint();
+    }
+    requestAnimationFrame(tick);
+  }
+  new IntersectionObserver(function(e){vis=e[0].isIntersecting},{rootMargin:'100px'}).observe(stage);
+  stage.addEventListener('pointerdown',function(e){drag=true;px=e.clientX;moved=0;vel=0;target=null;stage.classList.add('drag')});
+  addEventListener('pointermove',function(e){if(!drag)return;var dx=e.clientX-px;px=e.clientX;moved+=Math.abs(dx);ang+=dx*.28;vel=dx*.28},{passive:true});
+  function up(e){if(!drag)return;drag=false;stage.classList.remove('drag');
+    if(moved<6){var p=e.target.closest&&e.target.closest('.panel');if(p)openPanel(p)}}
+  addEventListener('pointerup',up);addEventListener('pointercancel',function(){drag=false;stage.classList.remove('drag')});
+  function openPanel(p){var s=shots.filter(function(x){return x.dataset.slug===p.dataset.slug})[0];if(s){var keep=shots.map(function(x){return x.hidden});lbOpen(s,p)}}
+  panels.forEach(function(p,i){
+    p.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();openPanel(p)}});
+    p.addEventListener('focus',function(){target=-i*step+Math.round((ang+i*step)/360)*360});
+  });
+  function go(d){var base=target!==null?target:Math.round(ang/step)*step;target=base-d*step;vel=0}
+  $('rPrev').onclick=function(){go(-1)};$('rNext').onclick=function(){go(1)};
+  paint();tick();
+})();
+
+/* ---------- phone ---------- */
+(function(){
+  var F={RED:'contrast(1.14) saturate(1.2) hue-rotate(-5deg)',FX3:'contrast(1.02) saturate(.9) brightness(1.05) sepia(.08)',FX6:'contrast(1.07) saturate(1) sepia(.14)',
+    iPHONE:'saturate(1.3) contrast(1.04) brightness(1.08)',LEICA:'contrast(1.24) saturate(.82) brightness(.95)',FILM:'sepia(.32) contrast(.94) saturate(1.12) brightness(1.03)',CINEMA:'contrast(1.16) saturate(.78) hue-rotate(10deg) brightness(.94)'};
+  var img=$('vImg'),view=$('view'),tag=$('vTag'),looks=[].slice.call(document.querySelectorAll('.look'));
+  function set(k){img.style.filter=F[k];tag.textContent=k;view.classList.toggle('cine',k==='CINEMA');looks.forEach(function(b){b.setAttribute('aria-pressed',b.dataset.k===k?'true':'false')})}
+  var G={RED:'rgba(255,70,40,.3)',FX3:'rgba(120,200,255,.22)',FX6:'rgba(255,200,120,.24)',iPHONE:'rgba(255,255,255,.2)',LEICA:'rgba(255,40,40,.24)',FILM:'rgba(255,190,90,.3)',CINEMA:'rgba(80,220,200,.22)'};
+  var ph0=$('phone'),auto=null,ks=Object.keys(F),ki=0,_set=set;set=function(k){_set(k);ph0.style.setProperty('--glow',G[k])};
+  looks.forEach(function(b){b.onclick=function(){if(auto){clearInterval(auto);auto=null}set(b.dataset.k)}});set('RED');
+  if(!reduce)auto=setInterval(function(){var r=ph0.getBoundingClientRect();if(r.bottom<0||r.top>innerHeight)return;ki=(ki+1)%ks.length;set(ks[ki])},2400);
+  var z=$('zoomR'),zo=$('zoomO');z.addEventListener('input',function(){view.style.setProperty('--z',z.value);zo.textContent=(+z.value).toFixed(1)+'x'});
+  var fl=$('flash');$('shutter').onclick=function(){fl.classList.remove('go');void fl.offsetWidth;fl.classList.add('go')};
+  var ph=$('phone');
+  if(fine&&!reduce){addEventListener('pointermove',function(e){var r=ph.getBoundingClientRect();if(r.bottom<0||r.top>innerHeight)return;
+    var x=(e.clientX-(r.left+r.width/2))/innerWidth,y=(e.clientY-(r.top+r.height/2))/innerHeight;
+    ph.style.setProperty('--py',(x*26).toFixed(2)+'deg');ph.style.setProperty('--px',(-y*18).toFixed(2)+'deg')},{passive:true})}
+  else{ph.style.setProperty('--py','0deg');ph.style.setProperty('--px','0deg')}
+})();
+
+/* ---------- the water ---------- */
+(function(){
+  var SL=[{"s": "sea-boat", "t": "Silver water", "y": 0.52}, {"s": "sky-skyline", "t": "The city at sundown", "y": 0.3}, {"s": "sea-bird", "t": "Drinking gold", "y": 0.5}, {"s": "city-redlit", "t": "Lit in red", "y": 0.36}, {"s": "sky-bridge", "t": "Sunset over the bridge", "y": 0.34}];
+  var hero=$('hero'),cv=$('water'),sN=$('sN'),sT=$('sT'),sB=$('sB'),hint=$('hint');
+  if(!fine)hint.textContent='Touch the water';
+  var gl=null;try{gl=cv.getContext('webgl2',{antialias:false,alpha:false,powerPreference:'high-performance'})}catch(e){}
+  var cur=0,nxt=0,mix=0,moving=false,hold=0,HOLD=6.5;
+  function label(i){sN.textContent=String(i+1).padStart(2,'0')+' / '+String(SL.length).padStart(2,'0');sT.textContent=SL[i].t}
+  var still=hero.querySelector('.still');
+  if(!gl||!gl.getExtension('EXT_color_buffer_float')){ /* plain slideshow fallback */
+    if(!reduce)setInterval(function(){cur=(cur+1)%SL.length;still.src='hero/'+SL[cur].s+'.jpg';label(cur)},HOLD*1000);
+    return;
+  }
+  gl.getExtension('OES_texture_float_linear');
+  function sh(t,src){var s=gl.createShader(t);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(s));return s}
+  function prog(fs){var p=gl.createProgram();gl.attachShader(p,sh(gl.VERTEX_SHADER,VS));gl.attachShader(p,sh(gl.FRAGMENT_SHADER,fs));gl.bindAttribLocation(p,0,'p');gl.linkProgram(p);
+    if(!gl.getProgramParameter(p,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(p));
+    var u={},n=gl.getProgramParameter(p,gl.ACTIVE_UNIFORMS);for(var i=0;i<n;i++){var nm=gl.getActiveUniform(p,i).name;u[nm]=gl.getUniformLocation(p,nm)}return {p:p,u:u}}
+  var VS='#version 300 es\nin vec2 p;out vec2 v;void main(){v=p*.5+.5;gl_Position=vec4(p,0.,1.);}';
+  var SIM='#version 300 es\nprecision highp float;in vec2 v;out vec4 o;uniform sampler2D uS;uniform vec2 uPx;uniform vec3 uDrop;uniform float uR;uniform float uAsp;'+
+    'void main(){vec4 s=texture(uS,v);float h=s.r,vel=s.g;'+
+    'float a=(texture(uS,v+vec2(uPx.x,0.)).r+texture(uS,v-vec2(uPx.x,0.)).r+texture(uS,v+vec2(0.,uPx.y)).r+texture(uS,v-vec2(0.,uPx.y)).r)*.25;'+
+    'vel+=(a-h)*1.0;vel*=.972;h+=vel;h=mix(h,a,.05)*.994;vec2 d=v-uDrop.xy;d.x*=uAsp;h+=uDrop.z*exp(-dot(d,d)/(uR*uR));h=clamp(h,-1.,1.);vel=clamp(vel,-.6,.6);if(!(h==h))h=0.;if(!(vel==vel))vel=0.;o=vec4(h,vel,0.,1.);}';
+  var DRAW='#version 300 es\nprecision highp float;in vec2 v;out vec4 o;uniform sampler2D uS,uA,uB;uniform vec2 uPx;uniform vec4 uTa,uTb;uniform float uMix;'+
+    'void main(){float hx=texture(uS,v+vec2(uPx.x,0.)).r-texture(uS,v-vec2(uPx.x,0.)).r;float hy=texture(uS,v+vec2(0.,uPx.y)).r-texture(uS,v-vec2(0.,uPx.y)).r;'+
+    'vec2 n=vec2(hx,hy);float b=sin(uMix*3.14159);vec2 off=clamp(n*(.32+b*.9),-.06,.06);'+
+    'vec3 a=texture(uA,uTa.xy+(v-.5)*uTa.zw+off).rgb;vec3 c=texture(uB,uTb.xy+(v-.5)*uTb.zw+off).rgb;'+
+    'float h=texture(uS,v).r;float m=smoothstep(0.,1.,clamp(uMix*1.5-.25+h*2.5*b,0.,1.));vec3 col=mix(a,c,m);'+
+    'vec3 nn=normalize(vec3(-n*26.,1.));float sp=pow(max(0.,dot(nn,normalize(vec3(.35,.55,.75)))),70.);col+=vec3(1.,.92,.78)*sp*.5;'+
+    'col*=1.-min(.3,length(n)*1.2);o=vec4(col,1.);}';
+  var sim,draw;try{sim=prog(SIM);draw=prog(DRAW)}catch(e){return}
+  var buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,2,gl.FLOAT,false,0,0);
+  var W=0,H=0,sw=0,sh2=0,fb=[],tx=[],ri=0;
+  function mk(){var t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,t);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA16F,sw,sh2,0,gl.RGBA,gl.HALF_FLOAT,null);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+    var f=gl.createFramebuffer();gl.bindFramebuffer(gl.FRAMEBUFFER,f);gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,t,0);
+    gl.clearColor(0,0,0,1);gl.clear(gl.COLOR_BUFFER_BIT);return [t,f]}
+  function resize(){var r=hero.getBoundingClientRect(),d=Math.min(devicePixelRatio||1,1.5);var w=Math.round(r.width*d),h=Math.round(r.height*d);
+    if(w===W&&h===H)return;W=w;H=h;cv.width=W;cv.height=H;var k=Math.min(1,300/Math.max(r.width,r.height)*1.0);sw=Math.max(64,Math.round(r.width*k));sh2=Math.max(64,Math.round(r.height*k));
+    tx.forEach(function(t){gl.deleteTexture(t)});fb.forEach(function(f){gl.deleteFramebuffer(f)});var a=mk(),b=mk();tx=[a[0],b[0]];fb=[a[1],b[1]];
+    if(gl.checkFramebufferStatus(gl.FRAMEBUFFER)!==gl.FRAMEBUFFER_COMPLETE)ok=false}
+  var ok=true;resize();if(!ok)return;addEventListener('resize',resize);
+  var imgs=[];
+  function load(i,cb){if(imgs[i])return cb&&cb();var im=new Image();im.onload=function(){var t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,t);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);
+      try{gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,im)}catch(e){return}
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+      imgs[i]={t:t,a:im.naturalWidth/im.naturalHeight};cb&&cb()};im.src='hero/'+SL[i].s+'.jpg'}
+  function fit(i){var ia=imgs[i].a,ca=W/H,fy=SL[i].y,sxx=1,syy=1,cx2=.5,cy2=.5;
+    if(ca>ia){syy=ia/ca;cy2=Math.min(1-syy/2,Math.max(syy/2,fy))}else{sxx=ca/ia}
+    return [cx2,1-cy2,sxx,syy]}
+  var drops=[];
+  function drop(x,y,s,r){if(drops.length<24)drops.push([x,y,s,r])}
+  function stepSim(d){gl.useProgram(sim.p);gl.viewport(0,0,sw,sh2);gl.bindFramebuffer(gl.FRAMEBUFFER,fb[1-ri]);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,tx[ri]);
+    gl.uniform1i(sim.u.uS,0);gl.uniform2f(sim.u.uPx,1/sw,1/sh2);gl.uniform1f(sim.u.uAsp,sw/sh2);
+    gl.uniform3f(sim.u.uDrop,d?d[0]:0,d?d[1]:0,d?d[2]:0);gl.uniform1f(sim.u.uR,d?d[3]:.03);gl.drawArrays(gl.TRIANGLE_STRIP,0,4);ri=1-ri}
+  function render(){gl.useProgram(draw.p);gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.viewport(0,0,W,H);
+    gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,tx[ri]);gl.uniform1i(draw.u.uS,0);
+    gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,imgs[cur].t);gl.uniform1i(draw.u.uA,1);
+    gl.activeTexture(gl.TEXTURE2);gl.bindTexture(gl.TEXTURE_2D,imgs[nxt].t);gl.uniform1i(draw.u.uB,2);
+    gl.uniform2f(draw.u.uPx,1/sw,1/sh2);gl.uniform4fv(draw.u.uTa,fit(cur));gl.uniform4fv(draw.u.uTb,fit(nxt));gl.uniform1f(draw.u.uMix,mix);
+    gl.drawArrays(gl.TRIANGLE_STRIP,0,4)}
+  var vis=true,last=0,amb=0,acc=0;
+  new IntersectionObserver(function(e){vis=e[0].isIntersecting}).observe(hero);
+  function frame(t){requestAnimationFrame(frame);if(!vis||document.hidden||!imgs[cur]){last=t;return}
+    var dt=Math.min(.05,(t-last)/1000);last=t;
+    if(!reduce){amb+=dt;if(amb>1.1){amb=0;drop(Math.random(),Math.random()*.6,.12+Math.random()*.1,.022)}}
+    acc+=dt;var ns=0;while(acc>=1/120&&ns<4){stepSim(drops.shift());acc-=1/120;ns++}if(acc>.1)acc=0;
+    if(moving){mix+=dt/1.7;if(mix>=1){mix=0;cur=nxt;moving=false;hold=0}}
+    else if(!reduce){hold+=dt;sB.style.width=Math.min(100,hold/HOLD*100)+'%';
+      if(hold>=HOLD){var n=(cur+1)%SL.length;if(imgs[n]){nxt=n;moving=true;label(n);sB.style.width='0%';drop(.5,.45,.6,.09);drop(.25,.6,.35,.06);drop(.75,.6,.35,.06)}else{load(n)}}
+      else if(hold>HOLD-3)load((cur+1)%SL.length)}
+    render()}
+  var lx=-1,ly=-1;
+  hero.addEventListener('pointermove',function(e){var r=hero.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=1-(e.clientY-r.top)/r.height;
+    var d=Math.hypot((x-lx)*r.width,(y-ly)*r.height);if(d<10)return;lx=x;ly=y;drop(x,y,(e.pointerType==='touch'?.45:1)*Math.min(.5,.1+d*.004),.028)},{passive:true});
+  hero.addEventListener('pointerdown',function(e){var r=hero.getBoundingClientRect();drop((e.clientX-r.left)/r.width,1-(e.clientY-r.top)/r.height,.5,.05)},{passive:true});
+  load(0,function(){cv.classList.add('on');drop(.5,.5,.8,.08);requestAnimationFrame(frame)});
+})();
+})();
+</script>
+</body>
+</html>
