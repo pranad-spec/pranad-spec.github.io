@@ -342,7 +342,7 @@ html.pt-on .pname span{opacity:0}
 @media (max-width:860px){
   .app,.about{grid-template-columns:1fr}
   .grid{columns:3;column-gap:6px}.shot{margin-bottom:6px}
-  .hint{display:none}
+  .hint{writing-mode:horizontal-tb;right:auto;left:var(--gutter);top:88px;transform:none;color:#e9e3d8}
   .slide{min-width:0;width:100%}
 }
 @media (prefers-reduced-motion:reduce){
@@ -1115,7 +1115,7 @@ if(fine){
 (function(){
   var SL=[{"s": "sea-boat", "t": "Silver water", "y": 0.52}];
   var hero=$('hero'),cv=$('water'),sN=$('sN')||{},sT=$('sT')||{},sB=$('sB')||{style:{}},hint=$('hint');
-  if(!fine)hint.textContent='Touch the water';
+  if(!fine)hint.textContent='Swirl a finger on the water';
   var gl=null;try{gl=cv.getContext('webgl2',{antialias:false,alpha:false,powerPreference:'high-performance'})}catch(e){}
   var cur=0,nxt=0,mix=0,moving=false,hold=0,HOLD=6.5;
   function label(i){sN.textContent=String(i+1).padStart(2,'0')+' / '+String(SL.length).padStart(2,'0');sT.textContent=SL[i].t}
@@ -1188,9 +1188,16 @@ if(fine){
       else if(hold>HOLD-3)load((cur+1)%SL.length)}
     render()}
   var lx=-1,ly=-1;
-  hero.addEventListener('pointermove',function(e){var r=hero.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=1-(e.clientY-r.top)/r.height;
+  /* fingers: ripples follow the touch and the phone hums with the waves */
+  var tlx=-1,tly=-1,tlast=0;
+  function touchWave(e){var t=e.touches[0];if(!t)return;var r=hero.getBoundingClientRect(),x=(t.clientX-r.left)/r.width,y=1-(t.clientY-r.top)/r.height;
+    if(y<0||y>1)return;var d=Math.hypot((x-tlx)*r.width,(y-tly)*r.height);if(e.type==='touchstart'){tlx=x;tly=y;drop(x,y,.5,.05);buzz(10);return}
+    if(d<7)return;tlx=x;tly=y;drop(x,y,Math.min(.55,.16+d*.006),.03);
+    var now=performance.now();if(now-tlast>42){tlast=now;buzz(Math.round(Math.min(26,7+d*.22)))}}
+  hero.addEventListener('touchstart',touchWave,{passive:true});hero.addEventListener('touchmove',touchWave,{passive:true});
+  hero.addEventListener('pointermove',function(e){if(e.pointerType==='touch')return;var r=hero.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=1-(e.clientY-r.top)/r.height;
     var d=Math.hypot((x-lx)*r.width,(y-ly)*r.height);if(d<10)return;lx=x;ly=y;drop(x,y,(e.pointerType==='touch'?.45:1)*Math.min(.5,.1+d*.004),.028)},{passive:true});
-  hero.addEventListener('pointerdown',function(e){var r=hero.getBoundingClientRect();drop((e.clientX-r.left)/r.width,1-(e.clientY-r.top)/r.height,.5,.05)},{passive:true});
+  hero.addEventListener('pointerdown',function(e){if(e.pointerType==='touch')return;var r=hero.getBoundingClientRect();drop((e.clientX-r.left)/r.width,1-(e.clientY-r.top)/r.height,.5,.05)},{passive:true});
   load(0,function(){cv.classList.add('on');drop(.5,.5,.8,.08);requestAnimationFrame(frame)});
 })();
 })();
