@@ -316,7 +316,9 @@ html.cam-on .cam3d{display:block}
 html.cam-on .camnote{display:block}
 
 /* ---- fly-through ---- */
-#fly{height:480vh;padding:0;display:none}
+#fly{height:340vh;padding:0;display:none}
+#vault{height:330vh;padding:0;display:none}
+html.vault-on #vault{display:block}
 html.fly-on #fly{display:block}
 .flypin{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden;background:#000}
 .flypin canvas{position:absolute;inset:0;width:100%;height:100%;cursor:pointer}
@@ -474,8 +476,16 @@ html.pt-on .pname span{opacity:0}
   <section id="fly">
     <div class="flypin" id="flypin" data-cursor="VIEW">
       <canvas aria-hidden="true"></canvas>
+      <h2>Fly <i>through</i></h2>
+      <p class="mono">Keep scrolling. Tap a photo to open it.</p>
+    </div>
+  </section>
+
+  <section id="vault">
+    <div class="flypin" id="vaultpin" data-cursor="VIEW">
+      <canvas aria-hidden="true"></canvas>
       <h2>The <i>vault</i></h2>
-      <p class="mono" id="flyhint">Scroll to open the vault</p>
+      <p class="mono" id="vaulthint">Scroll to open the vault</p>
     </div>
   </section>
 
@@ -952,10 +962,35 @@ function studio(R,scene){var c=document.createElement('canvas');c.width=1024;c.h
     R.render(scene,cam)})(t0);
 })();
 
-/* ---------- the vault: door opens, photos burst out, then you fly inside ---------- */
+/* ---------- fly through the photos ---------- */
 (function(){
-  var sec=$('fly'),pin=$('flypin');if(!window.THREE||!pin||shots.length<40)return;var cv=pin.querySelector('canvas'),R=mkR(cv,true);if(!R)return;
+  var sec=$('fly'),pin=$('flypin');if(!window.THREE||!pin||shots.length<20)return;var cv=pin.querySelector('canvas'),R=mkR(cv,false);if(!R)return;
   document.documentElement.classList.add('fly-on');
+  var scene=new THREE.Scene();scene.fog=new THREE.Fog(0x000000,5,24);var cam=new THREE.PerspectiveCamera(50,1,.1,60);
+  var pick=shots.filter(function(s,i){return i%4===1}).slice(0,28),GAP=3.1,items=[],loaded=false,ld=new THREE.TextureLoader();
+  function rnd(i){var x=Math.sin(i*127.1+3.3)*43758.5453;return x-Math.floor(x)}
+  pick.forEach(function(s,i){var im=s.querySelector('img'),a=(+im.getAttribute('width'))/(+im.getAttribute('height')),h=a<1?2.7:2.0,w=h*a;
+    var m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({color:0x222222,transparent:true}));
+    var side=i%2?1:-1;m.userData={s:s,side:side,bx:side*(1.25+rnd(i)*1.5),by:(rnd(i+50)-.5)*1.9};m.position.z=-i*GAP;m.rotation.y=-side*.22;scene.add(m);items.push(m)});
+  function load(){if(loaded)return;loaded=true;items.forEach(function(m){ld.load(m.userData.s.querySelector('img').getAttribute('src'),function(t){t.encoding=THREE.sRGBEncoding;m.material.map=t;m.material.color.set(0xffffff);m.material.needsUpdate=true})})}
+  var W=0,H=0,k=1;function layout(){W=pin.clientWidth;H=pin.clientHeight;if(!W||!H)return;R.setSize(W,H,false);cam.aspect=W/H;cam.updateProjectionMatrix();var nar=cam.aspect<1;k=nar?.42:1;items.forEach(function(m,i){var w=m.geometry.parameters.width,sc=nar?Math.min(1,1.3/w):1;m.scale.setScalar(sc);m.position.x=nar?m.userData.side*(.16+rnd(i+9)*.26):m.userData.bx;m.position.y=m.userData.by*(nar?1.25:1)})}
+  layout();addEventListener('resize',layout);
+  var vis=false,mx=0,my=0,cz=6,ray=new THREE.Raycaster(),v2=new THREE.Vector2(),dn=null;
+  new IntersectionObserver(function(e){vis=e[0].isIntersecting;if(vis)load()},{rootMargin:'600px'}).observe(sec);
+  pin.addEventListener('pointermove',function(e){var r=pin.getBoundingClientRect();mx=(e.clientX-r.left)/r.width*2-1;my=(e.clientY-r.top)/r.height*2-1},{passive:true});
+  cv.addEventListener('pointerdown',function(e){dn=[e.clientX,e.clientY]});
+  cv.addEventListener('pointerup',function(e){if(!dn||Math.abs(e.clientX-dn[0])+Math.abs(e.clientY-dn[1])>8)return;var r=cv.getBoundingClientRect();v2.set((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height*2-1));ray.setFromCamera(v2,cam);
+    var h=ray.intersectObjects(items).filter(function(x){return x.object.material.opacity>.3})[0];if(h){buzz(12);lbOpen(h.object.userData.s,null)}});
+  (function loop(){requestAnimationFrame(loop);if(!vis||document.hidden)return;var r=sec.getBoundingClientRect(),p=Math.max(0,Math.min(1,-r.top/(r.height-innerHeight)));
+    var tz=6-p*((items.length-1)*GAP+3);cz+=(tz-cz)*(reduce?1:.09);cam.position.set(mx*.5*k,-my*.3,cz);cam.rotation.set(-my*.03,-mx*.05,0);
+    items.forEach(function(m){var d=cz-m.position.z;m.material.opacity=Math.max(0,Math.min(1,(d-.9)/2.2));m.visible=d>.6&&d<26;m.rotation.y=-m.userData.side*(.22+Math.max(0,1-d/7)*.25)});
+    R.render(scene,cam)})();
+})();
+
+/* ---------- the vault in front of the archive: door opens and the photos burst out ---------- */
+(function(){
+  var sec=$('vault'),pin=$('vaultpin');if(!window.THREE||!pin||shots.length<40)return;var cv=pin.querySelector('canvas'),R=mkR(cv,true);if(!R)return;
+  document.documentElement.classList.add('vault-on');
   var scene=new THREE.Scene();scene.fog=new THREE.Fog(0x000000,7,30);var cam=new THREE.PerspectiveCamera(50,1,.1,80);studio(R,scene);
   var S=function(c,m,r){return new THREE.MeshStandardMaterial({color:c,metalness:m,roughness:r})};
   var wallM=S(0x23272d,.9,.5),chrome=S(0xffffff,1,.12),steel=S(0x8b929c,1,.3),dark=S(0x15171a,1,.4);
@@ -990,15 +1025,13 @@ function studio(R,scene){var c=document.createElement('canvas');c.width=1024;c.h
   var ld=new THREE.TextureLoader(),GAP=3.1,items=[],burst=[],all=[],loaded=false;
   function plane(s,i){var im=s.querySelector('img'),a=(+im.getAttribute('width'))/(+im.getAttribute('height')),h=a<1?2.7:2.0,w=h*a;
     var m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({color:0x222222,transparent:true,toneMapped:false,side:THREE.DoubleSide}));m.userData.s=s;m.userData.w=w;scene.add(m);all.push(m);return m}
-  shots.filter(function(s,i){return i%4===1}).slice(0,26).forEach(function(s,i){var m=plane(s,i),side=i%2?1:-1;m.userData.side=side;m.userData.bx=side*(1.25+rnd(i)*1.5);m.userData.by=(rnd(i+50)-.5)*1.9;m.position.z=-4-i*GAP;items.push(m)});
-  shots.filter(function(s,i){return i%4===3}).slice(0,22).forEach(function(s,i){var m=plane(s,i+100),a=rnd(i+7)*Math.PI*2,r=2.2+rnd(i+13)*4.6;
-    m.userData.ex=Math.cos(a)*r;m.userData.ey=Math.sin(a)*r*.62;m.userData.ez=.9+rnd(i+21)*4.4;m.userData.rz=(rnd(i+31)-.5)*.9;m.userData.ry=(rnd(i+41)-.5)*.8;m.userData.d=rnd(i+3)*.25;burst.push(m)});
+  var NB=innerWidth<700?46:84;shots.filter(function(s,i){return i%4!==1}).slice(0,NB).forEach(function(s,i){var m=plane(s,i+100),a=rnd(i+7)*Math.PI*2,r=1.4+rnd(i+13)*7.2;
+    m.userData.ex=Math.cos(a)*r;m.userData.ey=Math.sin(a)*r*.62;m.userData.ez=.6+rnd(i+21)*6.2;m.userData.rz=(rnd(i+31)-.5)*.9;m.userData.ry=(rnd(i+41)-.5)*.8;m.userData.d=rnd(i+3)*.4;burst.push(m)});
   function load(){if(loaded)return;loaded=true;all.forEach(function(m){ld.load(m.userData.s.querySelector('img').getAttribute('src'),function(t){t.encoding=THREE.sRGBEncoding;m.material.map=t;m.material.color.set(0xffffff);m.material.needsUpdate=true})})}
   var W=0,H=0,nar=false,z0=8;
-  function layout(){W=pin.clientWidth;H=pin.clientHeight;if(!W||!H)return;R.setSize(W,H,false);cam.aspect=W/H;cam.updateProjectionMatrix();nar=cam.aspect<1;z0=nar?Math.min(15,3.3/(Math.tan(25*Math.PI/180)*cam.aspect)):8;
-    items.forEach(function(m,i){var sc=nar?Math.min(1,1.3/m.userData.w):1;m.scale.setScalar(sc);m.position.x=nar?m.userData.side*(.16+rnd(i+9)*.26):m.userData.bx;m.position.y=m.userData.by*(nar?1.25:1)})}
+  function layout(){W=pin.clientWidth;H=pin.clientHeight;if(!W||!H)return;R.setSize(W,H,false);cam.aspect=W/H;cam.updateProjectionMatrix();nar=cam.aspect<1;z0=nar?Math.min(15,3.3/(Math.tan(25*Math.PI/180)*cam.aspect)):8;}
   layout();addEventListener('resize',layout);
-  var vis=false,mx=0,my=0,cz2=8,ray=new THREE.Raycaster(),v2=new THREE.Vector2(),dn=null,bm=0,bv=0,was=0,shake=0,hint=$('flyhint');
+  var vis=false,mx=0,my=0,cz2=8,ray=new THREE.Raycaster(),v2=new THREE.Vector2(),dn=null,bm=0,bv=0,was=0,shake=0,hint=$('vaulthint');
   new IntersectionObserver(function(e){vis=e[0].isIntersecting;if(vis)load()},{rootMargin:'700px'}).observe(sec);
   pin.addEventListener('pointermove',function(e){var r=pin.getBoundingClientRect();mx=(e.clientX-r.left)/r.width*2-1;my=(e.clientY-r.top)/r.height*2-1},{passive:true});
   cv.addEventListener('pointerdown',function(e){dn=[e.clientX,e.clientY]});
@@ -1008,19 +1041,19 @@ function studio(R,scene){var c=document.createElement('canvas');c.width=1024;c.h
   var t0=performance.now();
   (function loop(now){requestAnimationFrame(loop);if(!vis||document.hidden)return;var t=(now-t0)/1000,r=sec.getBoundingClientRect(),p=Math.max(0,Math.min(1,-r.top/(r.height-innerHeight)));
     var un=ease(p/.09),op=ease((p-.09)/.17),tgt=p>.24?1:0;
-    if(reduce){bm=tgt}else{bv+=(tgt-bm)*.06;bv*=.84;bm+=bv}
+    if(reduce){bm=tgt}else{bv+=(tgt-bm)*.085;bv*=.8;bm+=bv}
     if(tgt&&!was){shake=1;buzz([40,30,70]);if(typeof boomSound==='function')boomSound()}was=tgt;shake*=.9;
     wheel.rotation.z=-un*5.5-op*1.2;bolts.forEach(function(bo){var rr=OR+.2-un*.42;bo.position.x=Math.cos(bo.userData.a)*rr;bo.position.y=Math.sin(bo.userData.a)*rr});
     hinge.rotation.y=op*2.05;glowM.opacity=op*.95;glow.scale.setScalar(.6+op*.5+bm*.25);lamp.intensity=op*3.2;
-    hint.textContent=p<.09?'Scroll to open the vault':p<.3?'Keep going':'Fly inside. Tap a photo to open it.';
-    var fq=Math.max(0,(p-.36)/.64),tz=z0-fq*((items.length-1)*GAP+8+z0);cz2+=(tz-cz2)*(reduce?1:.09);
+    hint.textContent=p<.09?'Scroll to open the vault':p<.26?'Keep going':'Tap a photo to open it. The archive is below.';
+    var fq=ease((p-.42)/.58),tz=z0-fq*(z0-.6);cz2+=(tz-cz2)*(reduce?1:.09);
     var sx=(Math.random()-.5)*shake*.25,sy=(Math.random()-.5)*shake*.25,k=nar?.5:1;
     cam.position.set(mx*.5*k+sx,-my*.3+sy,cz2);cam.rotation.set(-my*.03,-mx*.05,0);
     burst.forEach(function(m,i){var u=m.userData,e=Math.max(0,Math.min(1.25,(bm-u.d)/(1-u.d))),kx=nar?.42:1;
       m.position.set(u.ex*kx*e+Math.sin(t*.5+i)*.08*e,u.ey*(nar?1.5:1)*e+Math.cos(t*.4+i*1.7)*.1*e,-1.2+(u.ez+1.2)*e);
-      m.rotation.set(0,u.ry*e+(1-Math.min(1,e))*3,u.rz*e+(1-Math.min(1,e))*5);m.scale.setScalar((nar?.5:.78)*Math.max(.001,Math.min(1.1,e)));
+      m.rotation.set((1-Math.min(1,e))*4,u.ry*e+(1-Math.min(1,e))*6,u.rz*e+(1-Math.min(1,e))*9);m.scale.setScalar((nar?.42:.66)*Math.max(.001,Math.min(1.1,e)));
       var d=cz2-m.position.z;m.visible=e>.02&&d>.5;m.material.opacity=Math.max(0,Math.min(1,(d-.8)/2))});
-    items.forEach(function(m){var d=cz2-m.position.z;m.material.opacity=Math.max(0,Math.min(1,(d-.9)/2.2))*Math.min(1,op*3);m.visible=op>.05&&d>.6&&d<28;m.rotation.y=-m.userData.side*(.22+Math.max(0,1-d/7)*.25)});
+    glowM.opacity=Math.min(1,op*.95+fq*.6);glow.scale.setScalar(.6+op*.5+bm*.25+fq*2.5);
     R.render(scene,cam)})(t0);
 })();
 
