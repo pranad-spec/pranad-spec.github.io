@@ -305,6 +305,30 @@ html.c3d .cans{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;
 
 .hero #blobs{pointer-events:none;z-index:1}
 
+/* ---- 3D camera ---- */
+.cam3d{position:relative;height:clamp(300px,44vw,580px);cursor:grab;touch-action:pan-y;display:none;user-select:none;-webkit-user-select:none}
+html.cam-on .cam3d{display:block}
+.cam3d canvas{position:absolute;inset:0;width:100%;height:100%}
+.cam3d.drag{cursor:grabbing}
+.cam3d .flash3{position:absolute;inset:0;background:radial-gradient(circle at 50% 45%,#fff,rgba(255,255,255,0) 70%);opacity:0;pointer-events:none}
+.cam3d .flash3.go{animation:fl .55s ease-out}
+.camnote{text-align:center;margin:0 0 clamp(30px,5vw,60px);display:none}
+html.cam-on .camnote{display:block}
+
+/* ---- fly-through ---- */
+#fly{height:340vh;padding:0;display:none}
+html.fly-on #fly{display:block}
+.flypin{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden;background:#000}
+.flypin canvas{position:absolute;inset:0;width:100%;height:100%;cursor:pointer}
+.flypin .mono{position:absolute;left:0;right:0;bottom:22px;text-align:center;pointer-events:none}
+.flypin h2{position:absolute;left:var(--gutter);top:84px;pointer-events:none;z-index:1;font-size:clamp(40px,7vw,96px)}
+
+/* ---- particle name ---- */
+.pname{position:relative;display:block;height:clamp(210px,36vw,480px);text-decoration:none;touch-action:pan-y}
+.pname canvas{position:absolute;inset:0;width:100%;height:100%}
+.pname span{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--serif);font-size:clamp(96px,25vw,380px);letter-spacing:-.03em;color:#fff}
+html.pt-on .pname span{opacity:0}
+
 /* viewer */
 .lb{position:fixed;inset:0;z-index:80;background:#030303;display:none;grid-template-rows:auto 1fr auto;padding:12px}
 .lb.open{display:grid}
@@ -416,6 +440,14 @@ html.c3d .cans{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;
       <div class="strip" data-roll="city"><div class="track"><button class="tile" type="button" data-full="p/o108.jpg" data-title="City" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o108.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/n27.jpg" data-title="City" data-exif="Pixel 6 · 24mm · f/1.9 · 1/100s · ISO 208" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/n27.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/o58.jpg" data-title="City" data-exif="Xiaomi 15 · 23mm · f/1.6 · 1/100s · ISO 80" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o58.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/o71.jpg" data-title="City" data-exif="Pixel 6 · 24mm · f/1.9 · 1/560s · ISO 48" aria-label="Open photo" style="aspect-ratio:414/640"><img src="t/o71.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/o35.jpg" data-title="City" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o35.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/n23.jpg" data-title="City" data-exif="Pixel 6 · 24mm · f/1.9 · 1/1150s · ISO 43" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/n23.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/o36.jpg" data-title="City" data-exif="Xiaomi 15 · 46mm · f/1.6 · 1/100s · ISO 64" aria-label="Open photo" style="aspect-ratio:480/640"><img src="t/o36.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/n22.jpg" data-title="City" data-exif="" aria-label="Open photo" style="aspect-ratio:640/360"><img src="t/n22.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/n24.jpg" data-title="City" data-exif="Pixel 6 · 24mm · f/1.9 · 1/1150s · ISO 45" aria-label="Open photo" style="aspect-ratio:640/360"><img src="t/n24.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/o69.jpg" data-title="City" data-exif="Pixel 6 · 24mm · f/1.9 · 1/1400s · ISO 43" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o69.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/o74.jpg" data-title="City" data-exif="Pixel 6 · 24mm · f/1.9 · 1/310s · ISO 152" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o74.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/n25.jpg" data-title="City" data-exif="Pixel 6 · 24mm · f/1.9 · 1/3200s · ISO 46" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/n25.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/o57.jpg" data-title="City" data-exif="Xiaomi 15 · 120mm · f/2 · 1/37s · ISO 1250" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o57.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/n28.jpg" data-title="City" data-exif="" aria-label="Open photo" style="aspect-ratio:640/360"><img src="t/n28.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" data-full="p/o83.jpg" data-title="City" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o83.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o108.jpg" data-title="City" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o108.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/n27.jpg" data-title="City" data-exif="Pixel 6 · 24mm · f/1.9 · 1/100s · ISO 208" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/n27.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o58.jpg" data-title="City" data-exif="Xiaomi 15 · 23mm · f/1.6 · 1/100s · ISO 80" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o58.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o71.jpg" data-title="City" data-exif="Pixel 6 · 24mm · f/1.9 · 1/560s · ISO 48" aria-label="Open photo" style="aspect-ratio:414/640"><img src="t/o71.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o35.jpg" data-title="City" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o35.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/n23.jpg" data-title="City" data-exif="Pixel 6 · 24mm · f/1.9 · 1/1150s · ISO 43" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/n23.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o36.jpg" data-title="City" data-exif="Xiaomi 15 · 46mm · f/1.6 · 1/100s · ISO 64" aria-label="Open photo" style="aspect-ratio:480/640"><img src="t/o36.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/n22.jpg" data-title="City" data-exif="" aria-label="Open photo" style="aspect-ratio:640/360"><img src="t/n22.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/n24.jpg" data-title="City" data-exif="Pixel 6 · 24mm · f/1.9 · 1/1150s · ISO 45" aria-label="Open photo" style="aspect-ratio:640/360"><img src="t/n24.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o69.jpg" data-title="City" data-exif="Pixel 6 · 24mm · f/1.9 · 1/1400s · ISO 43" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o69.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o74.jpg" data-title="City" data-exif="Pixel 6 · 24mm · f/1.9 · 1/310s · ISO 152" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o74.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/n25.jpg" data-title="City" data-exif="Pixel 6 · 24mm · f/1.9 · 1/3200s · ISO 46" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/n25.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o57.jpg" data-title="City" data-exif="Xiaomi 15 · 120mm · f/2 · 1/37s · ISO 1250" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o57.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/n28.jpg" data-title="City" data-exif="" aria-label="Open photo" style="aspect-ratio:640/360"><img src="t/n28.jpg" alt="" loading="lazy" draggable="false"></button><button class="tile" type="button" tabindex="-1" aria-hidden="true" data-full="p/o83.jpg" data-title="City" data-exif="" aria-label="Open photo" style="aspect-ratio:360/640"><img src="t/o83.jpg" alt="" loading="lazy" draggable="false"></button></div></div>
     </div>
     <div class="rollname"><b id="rollName"></b><span class="mono" id="rollInfo"></span></div>
+  </section>
+
+  <section id="fly">
+    <div class="flypin" id="flypin" data-cursor="VIEW">
+      <canvas aria-hidden="true"></canvas>
+      <h2>Fly <i>through</i></h2>
+      <p class="mono">Keep scrolling. Tap a photo to open it.</p>
+    </div>
   </section>
 
   <section id="sheet">
@@ -606,6 +638,8 @@ html.c3d .cans{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;
   </section>
 
   <section id="about" style="padding-top:0">
+    <div class="cam3d" id="cam3d" data-cursor="DRAG"><canvas aria-hidden="true"></canvas><div class="flash3" id="flash3"></div></div>
+    <p class="mono camnote">Drag to turn it. Tap to fire the shutter.</p>
     <div class="wrap about">
       <div>
         <p class="mono rv" style="margin:0">So far</p>
@@ -620,9 +654,9 @@ html.c3d .cans{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;
   </section>
 
   <div class="end">
-    <div class="wrap">
+    <div>
       <p class="mono" style="margin:0 0 18px">Tap the name to open Instagram</p>
-      <a class="liq mag" href="https://www.instagram.com/pranad_clicks/" target="_blank" rel="noopener" data-cursor="INSTA" aria-label="Pranad on Instagram"><canvas class="lqbig" aria-hidden="true"></canvas><span>Pranad</span></a>
+      <a class="pname" id="pname" href="https://www.instagram.com/pranad_clicks/" target="_blank" rel="noopener" data-cursor="INSTA" aria-label="Pranad on Instagram"><canvas aria-hidden="true"></canvas><span>Pranad</span></a>
       <p class="mono">All photographs by Pranad</p>
     </div>
   </div>
@@ -788,6 +822,127 @@ var cio=new IntersectionObserver(function(es){es.forEach(function(e){if(!e.isInt
         o.x.drawImage(src,Math.min(512-sw,sx),o.big?0:(i*37)%(256-shh+1),sw,shh,0,0,W,H)}
     }
     requestAnimationFrame(loop)})(t0);
+})();
+
+/* ---------- shared 3D helpers ---------- */
+function mkR(cv,tone){try{var R=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true,powerPreference:'high-performance'});R.setPixelRatio(Math.min(devicePixelRatio||1,1.5));R.outputEncoding=THREE.sRGBEncoding;
+  if(tone){R.toneMapping=THREE.ACESFilmicToneMapping;R.toneMappingExposure=1.2}return R}catch(e){return null}}
+function studio(R,scene){var c=document.createElement('canvas');c.width=1024;c.height=512;var x=c.getContext('2d');x.fillStyle='#030304';x.fillRect(0,0,1024,512);
+  [[40,70,170,330,1],[300,30,60,440,.9],[460,130,240,150,1],[770,50,90,400,.95],[930,190,70,220,.7]].forEach(function(b){var g=x.createLinearGradient(b[0],0,b[0]+b[2],0);g.addColorStop(0,'rgba(255,255,255,0)');g.addColorStop(.2,'rgba(255,255,255,'+b[4]+')');g.addColorStop(.8,'rgba(255,255,255,'+b[4]+')');g.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=g;x.fillRect(b[0],b[1],b[2],b[3])});
+  var h=x.createLinearGradient(0,0,0,512);h.addColorStop(0,'rgba(255,255,255,.6)');h.addColorStop(.18,'rgba(255,255,255,0)');h.addColorStop(.85,'rgba(110,120,140,0)');h.addColorStop(1,'rgba(110,120,140,.4)');x.fillStyle=h;x.fillRect(0,0,1024,512);
+  var t=new THREE.CanvasTexture(c);t.mapping=THREE.EquirectangularReflectionMapping;t.encoding=THREE.sRGBEncoding;var pm=new THREE.PMREMGenerator(R);scene.environment=pm.fromEquirectangular(t).texture;t.dispose();pm.dispose()}
+
+/* ---------- 3D camera you can turn ---------- */
+(function(){
+  var host=$('cam3d');if(!window.THREE||!host)return;var cv=host.querySelector('canvas'),R=mkR(cv,true);if(!R)return;
+  var scene=new THREE.Scene(),cam=new THREE.PerspectiveCamera(26,1,.1,60);studio(R,scene);
+  var S=function(c,m,r){return new THREE.MeshStandardMaterial({color:c,metalness:m,roughness:r})};
+  var leather=S(0x101012,.1,.82),chrome=S(0xffffff,1,.13),steel=S(0x9ca3ad,1,.28),dark=S(0x1a1b1e,1,.36),black=S(0x070708,.5,.5);
+  function rr(w,h,r){var s=new THREE.Shape(),x=-w/2,y=-h/2;s.moveTo(x+r,y);s.lineTo(x+w-r,y);s.quadraticCurveTo(x+w,y,x+w,y+r);s.lineTo(x+w,y+h-r);s.quadraticCurveTo(x+w,y+h,x+w-r,y+h);s.lineTo(x+r,y+h);s.quadraticCurveTo(x,y+h,x,y+h-r);s.lineTo(x,y+r);s.quadraticCurveTo(x,y,x+r,y);return s}
+  function slab(w,h,d,r,m,bv,x,y,z){var g=new THREE.ExtrudeGeometry(rr(w,h,r),{depth:d,bevelEnabled:true,bevelSize:bv,bevelThickness:bv,bevelSegments:5,curveSegments:18});g.translate(0,0,-d/2);var o=new THREE.Mesh(g,m);o.position.set(x||0,y||0,z||0);return o}
+  function cylY(r,h,m,x,y,z,seg){var o=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,seg||64),m);o.position.set(x,y,z);return o}
+  function cylZ(r1,r2,h,m,z){var o=new THREE.Mesh(new THREE.CylinderGeometry(r1,r2,h,96),m);o.rotation.x=Math.PI/2;o.position.z=z;return o}
+  var G=new THREE.Group();scene.add(G);
+  G.add(slab(3.3,1.46,.92,.26,leather,.05,0,-.06,0));
+  G.add(slab(3.36,.44,.98,.2,chrome,.04,0,.86,0));
+  G.add(slab(3.36,.15,.98,.07,chrome,.03,0,-.84,0));
+  G.add(slab(.6,1.34,.34,.17,leather,.06,-1.28,-.08,.5));
+  G.add(slab(.56,.24,.05,.06,black,.015,1.12,.86,.54));G.add(slab(.26,.2,.05,.05,black,.015,.28,.86,.54));G.add(slab(.2,.2,.05,.1,black,.015,-.3,.86,.54));
+  var btn=cylY(.14,.12,chrome,1.12,1.2,.12);G.add(btn);G.add(cylY(.2,.05,steel,1.12,1.13,.12));
+  G.add(cylY(.3,.17,dark,.5,1.2,0,40));G.add(cylY(.31,.03,chrome,.5,1.29,0));G.add(cylY(.22,.13,steel,-1.15,1.18,0,32));
+  var shoe=new THREE.Mesh(new THREE.BoxGeometry(.52,.05,.5),dark);shoe.position.set(-.3,1.13,0);G.add(shoe);
+  [[-1.72,.55],[1.72,.55]].forEach(function(p){var t=new THREE.Mesh(new THREE.TorusGeometry(.09,.025,12,24),chrome);t.position.set(p[0],p[1],0);t.rotation.y=Math.PI/2;G.add(t)});
+  var L=new THREE.Group();L.position.set(.12,-.08,.46);G.add(L);
+  L.add(cylZ(.95,.95,.1,chrome,.05));L.add(cylZ(.82,.86,.42,dark,.3));
+  var ring=cylZ(.9,.9,.24,black,.42);L.add(ring);
+  for(var i=0;i<48;i++){var a=i/48*Math.PI*2,rb=new THREE.Mesh(new THREE.BoxGeometry(.035,.2,.03),dark);rb.position.set(Math.cos(a)*.905,Math.sin(a)*.905,.42);rb.rotation.z=a;rb.rotation.x=Math.PI/2;L.add(rb)}
+  L.add(cylZ(.8,.84,.2,chrome,.64));L.add(cylZ(.74,.78,.16,dark,.8));
+  var tube=new THREE.Mesh(new THREE.CylinderGeometry(.66,.5,.4,64,1,true),S(0x050506,.3,.6));tube.material.side=THREE.BackSide;tube.rotation.x=Math.PI/2;tube.position.z=.68;L.add(tube);
+  [.6,.48,.36].forEach(function(r,k){var t=new THREE.Mesh(new THREE.TorusGeometry(r,.018,10,64),steel);t.position.z=.84-k*.1;L.add(t)});
+  var glass=new THREE.Mesh(new THREE.SphereGeometry(1.1,64,24,0,Math.PI*2,0,.6),new THREE.MeshPhysicalMaterial({color:0x0b1626,metalness:.95,roughness:.02,clearcoat:1,clearcoatRoughness:0}));
+  glass.rotation.x=Math.PI/2;glass.position.z=.86-1.1*Math.cos(.6);L.add(glass);
+  var iris=new THREE.Mesh(new THREE.CircleGeometry(.2,6),new THREE.MeshBasicMaterial({color:0x000000}));iris.position.z=.5;L.add(iris);
+  var tc=document.createElement('canvas');tc.width=512;tc.height=96;var tx2=tc.getContext('2d');
+  function plate(){tx2.clearRect(0,0,512,96);tx2.fillStyle='#111';tx2.font='500 54px "JetBrains Mono", monospace';tx2.textAlign='center';tx2.textBaseline='middle';tx2.fillText('P R A N A D',256,50)}
+  plate();var pt=new THREE.CanvasTexture(tc),pl=new THREE.Mesh(new THREE.PlaneGeometry(.95,.18),new THREE.MeshBasicMaterial({map:pt,transparent:true}));pl.position.set(-1.02,.86,.535);G.add(pl);
+  document.fonts&&document.fonts.load('500 54px "JetBrains Mono"').then(function(){plate();pt.needsUpdate=true});
+  var W=0,H=0;function layout(){W=host.clientWidth;H=host.clientHeight;if(!W||!H)return;R.setSize(W,H,false);cam.aspect=W/H;var v=cam.fov*Math.PI/180,z=Math.max(1.55/Math.tan(v/2),2.15/(Math.tan(v/2)*cam.aspect));cam.position.set(0,.15,z);cam.lookAt(0,.1,0);cam.updateProjectionMatrix()}
+  document.documentElement.classList.add('cam-on');layout();addEventListener('resize',layout);
+  var vis=false,drag=false,px=0,py=0,moved=0,ry=0,rx=0,vy=0,vx=0,mx=0,my=0,kick=0,press=0;
+  host.addEventListener('pointerdown',function(e){drag=true;px=e.clientX;py=e.clientY;moved=0;host.classList.add('drag')});
+  addEventListener('pointermove',function(e){var r=host.getBoundingClientRect();mx=(e.clientX-r.left)/r.width*2-1;my=(e.clientY-r.top)/r.height*2-1;
+    if(!drag)return;var dx=e.clientX-px,dy=e.clientY-py;px=e.clientX;py=e.clientY;moved+=Math.abs(dx)+Math.abs(dy);vy=dx*.008;vx=dy*.004;ry+=vy;rx+=vx},{passive:true});
+  function up(){if(!drag)return;drag=false;host.classList.remove('drag');if(moved<8){kick=1;press=1;var f=$('flash3');f.classList.remove('go');void f.offsetWidth;f.classList.add('go')}}
+  addEventListener('pointerup',up);addEventListener('pointercancel',function(){drag=false;host.classList.remove('drag')});
+  new IntersectionObserver(function(e){vis=e[0].isIntersecting},{rootMargin:'80px'}).observe(host);
+  var t0=performance.now();
+  (function loop(now){requestAnimationFrame(loop);if(!vis||document.hidden)return;var t=(now-t0)/1000;
+    if(!drag){ry+=vy;rx+=vx;vy*=.95;vx*=.9;rx*=.94;if(!reduce)ry+=(Math.sin(t*.45)*.75-ry)*.012}
+    rx=Math.max(-.6,Math.min(.6,rx));kick*=.9;press*=.85;
+    G.rotation.y=ry;G.rotation.x=.1+rx+(reduce?0:Math.sin(t*.6)*.03);G.position.y=(reduce?0:Math.sin(t*.9)*.05)-kick*.08;G.scale.setScalar(1+kick*.04);
+    btn.position.y=1.2-press*.06;L.rotation.y=Math.max(-.12,Math.min(.12,mx*.1));L.rotation.x=Math.max(-.1,Math.min(.1,my*.08));iris.scale.setScalar(1-press*.6);
+    R.render(scene,cam)})(t0);
+})();
+
+/* ---------- fly through the photos ---------- */
+(function(){
+  var sec=$('fly'),pin=$('flypin');if(!window.THREE||!pin||shots.length<20)return;var cv=pin.querySelector('canvas'),R=mkR(cv,false);if(!R)return;
+  document.documentElement.classList.add('fly-on');
+  var scene=new THREE.Scene();scene.fog=new THREE.Fog(0x000000,5,24);var cam=new THREE.PerspectiveCamera(50,1,.1,60);
+  var pick=shots.filter(function(s,i){return i%4===1}).slice(0,28),GAP=3.1,items=[],loaded=false,ld=new THREE.TextureLoader();
+  function rnd(i){var x=Math.sin(i*127.1+3.3)*43758.5453;return x-Math.floor(x)}
+  pick.forEach(function(s,i){var im=s.querySelector('img'),a=(+im.getAttribute('width'))/(+im.getAttribute('height')),h=a<1?2.7:2.0,w=h*a;
+    var m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({color:0x222222,transparent:true}));
+    var side=i%2?1:-1;m.userData={s:s,side:side,bx:side*(1.25+rnd(i)*1.5),by:(rnd(i+50)-.5)*1.9};m.position.z=-i*GAP;m.rotation.y=-side*.22;scene.add(m);items.push(m)});
+  function load(){if(loaded)return;loaded=true;items.forEach(function(m){ld.load(m.userData.s.querySelector('img').getAttribute('src'),function(t){t.encoding=THREE.sRGBEncoding;m.material.map=t;m.material.color.set(0xffffff);m.material.needsUpdate=true})})}
+  var W=0,H=0,k=1;function layout(){W=pin.clientWidth;H=pin.clientHeight;if(!W||!H)return;R.setSize(W,H,false);cam.aspect=W/H;cam.updateProjectionMatrix();k=cam.aspect<1?.42:1;items.forEach(function(m){m.position.x=m.userData.bx*k;m.position.y=m.userData.by*(cam.aspect<1?1.3:1)})}
+  layout();addEventListener('resize',layout);
+  var vis=false,mx=0,my=0,cz=6,ray=new THREE.Raycaster(),v2=new THREE.Vector2(),dn=null;
+  new IntersectionObserver(function(e){vis=e[0].isIntersecting;if(vis)load()},{rootMargin:'600px'}).observe(sec);
+  pin.addEventListener('pointermove',function(e){var r=pin.getBoundingClientRect();mx=(e.clientX-r.left)/r.width*2-1;my=(e.clientY-r.top)/r.height*2-1},{passive:true});
+  cv.addEventListener('pointerdown',function(e){dn=[e.clientX,e.clientY]});
+  cv.addEventListener('pointerup',function(e){if(!dn||Math.abs(e.clientX-dn[0])+Math.abs(e.clientY-dn[1])>8)return;var r=cv.getBoundingClientRect();v2.set((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height*2-1));ray.setFromCamera(v2,cam);
+    var h=ray.intersectObjects(items).filter(function(x){return x.object.material.opacity>.3})[0];if(h)lbOpen(h.object.userData.s,null)});
+  (function loop(){requestAnimationFrame(loop);if(!vis||document.hidden)return;var r=sec.getBoundingClientRect(),p=Math.max(0,Math.min(1,-r.top/(r.height-innerHeight)));
+    var tz=6-p*((items.length-1)*GAP+3);cz+=(tz-cz)*(reduce?1:.09);cam.position.set(mx*.5*k,-my*.3,cz);cam.rotation.set(-my*.03,-mx*.05,0);
+    items.forEach(function(m){var d=cz-m.position.z;m.material.opacity=Math.max(0,Math.min(1,(d-.9)/2.2));m.visible=d>.6&&d<26;m.rotation.y=-m.userData.side*(.22+Math.max(0,1-d/7)*.25)});
+    R.render(scene,cam)})();
+})();
+
+/* ---------- the name, made of light ---------- */
+(function(){
+  var host=$('pname');if(!window.THREE||!host)return;var cv=host.querySelector('canvas'),R=mkR(cv,false);if(!R)return;
+  var small=innerWidth<700,N=small?9000:20000,scene=new THREE.Scene(),cam=new THREE.PerspectiveCamera(30,1,.1,60);cam.position.z=10;
+  var geo=new THREE.BufferGeometry(),aT=new Float32Array(N*3),aS=new Float32Array(N*3),aR=new Float32Array(N);
+  function sample(){var c=document.createElement('canvas');c.width=1000;c.height=340;var x=c.getContext('2d');x.fillStyle='#fff';x.textAlign='center';x.textBaseline='middle';x.font='400 300px "Instrument Serif", Georgia, serif';x.fillText('Pranad',500,180);
+    var d=x.getImageData(0,0,1000,340).data,pts=[];for(var y=0;y<340;y+=2)for(var q=0;q<1000;q+=2)if(d[(y*1000+q)*4+3]>120)pts.push(q,y);
+    if(pts.length<4)return;for(var i=0;i<N;i++){var j=(Math.random()*pts.length/2|0)*2;aT[i*3]=pts[j]-500+Math.random()*2;aT[i*3+1]=170-pts[j+1]+Math.random()*2;aT[i*3+2]=(Math.random()-.5)*26}
+    geo.attributes.aT&&(geo.attributes.aT.needsUpdate=true)}
+  for(var i=0;i<N;i++){var a=Math.random()*6.283,rr=3+Math.random()*9,zz=(Math.random()-.5)*10;aS[i*3]=Math.cos(a)*rr;aS[i*3+1]=Math.sin(a)*rr*.5;aS[i*3+2]=zz;aR[i]=Math.random()}
+  sample();
+  geo.setAttribute('position',new THREE.BufferAttribute(aS,3));geo.setAttribute('aT',new THREE.BufferAttribute(aT,3));geo.setAttribute('aR',new THREE.BufferAttribute(aR,1));
+  var U={uMix:{value:0},uTime:{value:0},uScale:{value:.01},uPx:{value:1},uMouse:{value:new THREE.Vector2(99,99)}};
+  var mat=new THREE.ShaderMaterial({uniforms:U,transparent:true,depthWrite:false,depthTest:false,blending:THREE.AdditiveBlending,
+    vertexShader:'attribute vec3 aT;attribute float aR;uniform float uMix,uTime,uScale,uPx;uniform vec2 uMouse;varying float vA;'+
+      'void main(){float m=smoothstep(0.,1.,clamp(uMix*1.7-aR*.7,0.,1.));vec3 t=vec3(aT.xy*uScale,aT.z*uScale*.6);vec3 p=mix(position,t,m);'+
+      'p.xy+=.035*vec2(sin(uTime*1.3+aR*40.),cos(uTime*1.1+aR*57.))*(.3+m);p.x+=(1.-m)*sin(uTime*.2+aR*9.)*.6;'+
+      'vec2 d=p.xy-uMouse;float f=smoothstep(1.5,0.,length(d));p.xy+=normalize(d+vec2(1e-4))*f*f*1.6;p.z+=f*2.*(aR-.5);'+
+      'vec4 mv=modelViewMatrix*vec4(p,1.);gl_Position=projectionMatrix*mv;gl_PointSize=uPx*(1.1+aR*2.4)*(10./-mv.z);vA=(.4+.6*aR)*(.35+.65*m)+f*.6;}',
+    fragmentShader:'precision mediump float;varying float vA;void main(){float d=length(gl_PointCoord-.5);float a=smoothstep(.5,0.,d);gl_FragColor=vec4(vec3(.8,.89,1.)*vA,a*a);}'});
+  var pts=new THREE.Points(geo,mat);pts.frustumCulled=false;scene.add(pts);
+  document.fonts&&document.fonts.load('400 300px "Instrument Serif"').then(sample);
+  var W=0,H=0,hh=Math.tan(15*Math.PI/180)*10,hw=hh;
+  function layout(){W=host.clientWidth;H=host.clientHeight;if(!W||!H)return;R.setSize(W,H,false);cam.aspect=W/H;cam.updateProjectionMatrix();hw=hh*cam.aspect;U.uScale.value=Math.min(2*hw*.9/1000,2*hh*.86/300);U.uPx.value=R.getPixelRatio()*(small?1.15:1)}
+  layout();addEventListener('resize',layout);document.documentElement.classList.add('pt-on');
+  var vis=false,tm=new THREE.Vector2(99,99),mix=0;
+  host.addEventListener('pointermove',function(e){var r=host.getBoundingClientRect();tm.set(((e.clientX-r.left)/r.width*2-1)*hw,-((e.clientY-r.top)/r.height*2-1)*hh)},{passive:true});
+  host.addEventListener('pointerleave',function(){tm.set(99,99)});
+  new IntersectionObserver(function(e){vis=e[0].isIntersecting},{rootMargin:'60px'}).observe(host);
+  var t0=performance.now();
+  (function loop(now){requestAnimationFrame(loop);if(!vis||document.hidden)return;var r=host.getBoundingClientRect(),p=Math.max(0,Math.min(1,(innerHeight-r.top)/(r.height*.95)));
+    mix+=((reduce?1:p)-mix)*.06;U.uMix.value=mix;U.uTime.value=reduce?0:(now-t0)/1000;
+    if(tm.x>90)U.uMouse.value.set(99,99);else if(U.uMouse.value.x>90)U.uMouse.value.copy(tm);else U.uMouse.value.lerp(tm,.18);
+    R.render(scene,cam)})(t0);
 })();
 
 /* ---------- 3D chrome canisters ---------- */
