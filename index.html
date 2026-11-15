@@ -966,11 +966,11 @@ function studio(R,scene){var c=document.createElement('canvas');c.width=1024;c.h
   var sec=$('fly'),pin=$('flypin');if(!window.THREE||!pin||shots.length<20)return;var cv=pin.querySelector('canvas'),R=mkR(cv,false);if(!R)return;
   document.documentElement.classList.add('fly-on');
   var scene=new THREE.Scene();scene.fog=new THREE.Fog(0x000000,5,24);var cam=new THREE.PerspectiveCamera(50,1,.1,60);
-  var pick=shots.filter(function(s,i){return i%4===1}).slice(0,28),GAP=3.1,items=[],loaded=false,ld=new THREE.TextureLoader();
+  var pick=shots.filter(function(s,i){return i%4===1}).slice(0,28),GAP=2.1,items=[],loaded=false,ld=new THREE.TextureLoader();
   function rnd(i){var x=Math.sin(i*127.1+3.3)*43758.5453;return x-Math.floor(x)}
   pick.forEach(function(s,i){var im=s.querySelector('img'),a=(+im.getAttribute('width'))/(+im.getAttribute('height')),h=a<1?2.7:2.0,w=h*a;
     var m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({color:0x222222,transparent:true}));
-    var side=i%2?1:-1;m.userData={s:s,side:side,bx:side*(1.25+rnd(i)*1.5),by:(rnd(i+50)-.5)*1.9};m.position.z=-i*GAP;m.rotation.y=-side*.22;scene.add(m);items.push(m)});
+    var side=i%2?1:-1;m.userData={s:s,side:side,bx:side*(.62+rnd(i)*.85),by:(rnd(i+50)-.5)*1.5};m.position.z=-i*GAP;m.rotation.y=-side*.22;scene.add(m);items.push(m)});
   function load(){if(loaded)return;loaded=true;items.forEach(function(m){ld.load(m.userData.s.querySelector('img').getAttribute('src'),function(t){t.encoding=THREE.sRGBEncoding;m.material.map=t;m.material.color.set(0xffffff);m.material.needsUpdate=true})})}
   var W=0,H=0,k=1;function layout(){W=pin.clientWidth;H=pin.clientHeight;if(!W||!H)return;R.setSize(W,H,false);cam.aspect=W/H;cam.updateProjectionMatrix();var nar=cam.aspect<1;k=nar?.42:1;items.forEach(function(m,i){var w=m.geometry.parameters.width,sc=nar?Math.min(1,1.3/w):1;m.scale.setScalar(sc);m.position.x=nar?m.userData.side*(.16+rnd(i+9)*.26):m.userData.bx;m.position.y=m.userData.by*(nar?1.25:1)})}
   layout();addEventListener('resize',layout);
