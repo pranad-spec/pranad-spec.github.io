@@ -484,7 +484,6 @@ html.pt-on .pname span{opacity:0}
   <section id="vault">
     <div class="flypin" id="vaultpin" data-cursor="VIEW">
       <canvas aria-hidden="true"></canvas>
-      <h2>The <i>vault</i></h2>
       <p class="mono" id="vaulthint">Scroll to open the vault</p>
     </div>
   </section>
@@ -993,16 +992,16 @@ function studio(R,scene){var c=document.createElement('canvas');c.width=1024;c.h
   document.documentElement.classList.add('vault-on');
   var scene=new THREE.Scene();scene.fog=new THREE.Fog(0x000000,7,30);var cam=new THREE.PerspectiveCamera(50,1,.1,80);studio(R,scene);
   var S=function(c,m,r){return new THREE.MeshStandardMaterial({color:c,metalness:m,roughness:r})};
-  var wallM=S(0x23272d,.9,.5),chrome=S(0xffffff,1,.12),steel=S(0x8b929c,1,.3),dark=S(0x15171a,1,.4);
+  var wallM=S(0x060607,.7,.62),chrome=S(0xffffff,1,.12),steel=S(0x8b929c,1,.3),dark=S(0x15171a,1,.4);
   function rnd(i){var x=Math.sin(i*127.1+3.3)*43758.5453;return x-Math.floor(x)}
   var OR=2;
   /* wall with a round opening */
   var ws=new THREE.Shape();ws.moveTo(-30,-16);ws.lineTo(30,-16);ws.lineTo(30,16);ws.lineTo(-30,16);ws.lineTo(-30,-16);var hole=new THREE.Path();hole.absarc(0,0,OR,0,Math.PI*2,true);ws.holes.push(hole);
-  var wall=new THREE.Mesh(new THREE.ExtrudeGeometry(ws,{depth:.5,bevelEnabled:false,curveSegments:64}),wallM);wall.position.z=-.5;scene.add(wall);
+  wallM.envMapIntensity=.22;var wall=new THREE.Mesh(new THREE.ExtrudeGeometry(ws,{depth:.5,bevelEnabled:false,curveSegments:64}),wallM);wall.position.z=-.5;scene.add(wall);
   for(var q=-4;q<=4;q++){if(q===0)continue;var sm=new THREE.Mesh(new THREE.BoxGeometry(.04,32,.02),dark);sm.position.set(q*3.4,0,.01);scene.add(sm)}
   var fr=new THREE.Mesh(new THREE.TorusGeometry(OR+.1,.17,20,96),chrome);fr.position.z=.05;scene.add(fr);
   [.5,.8,1.1].forEach(function(o,k){var t=new THREE.Mesh(new THREE.TorusGeometry(OR+o,.035,10,96),steel);t.position.z=.03;scene.add(t)});
-  var tun=new THREE.Mesh(new THREE.CylinderGeometry(OR,OR,.5,64,1,true),S(0xbfc5cd,1,.25));tun.material.side=THREE.BackSide;tun.rotation.x=Math.PI/2;tun.position.z=-.25;scene.add(tun);
+  var tun=new THREE.Mesh(new THREE.CylinderGeometry(OR,OR,.5,64,1,true),S(0xbfc5cd,1,.25));tun.material.side=THREE.BackSide;tun.material.color.set(0x55595f);tun.rotation.x=Math.PI/2;tun.position.z=-.25;scene.add(tun);
   /* the door, hinged on the right */
   var hinge=new THREE.Group();hinge.position.set(OR+.55,0,.3);scene.add(hinge);
   var door=new THREE.Group();door.position.x=-(OR+.55);hinge.add(door);
@@ -1044,7 +1043,7 @@ function studio(R,scene){var c=document.createElement('canvas');c.width=1024;c.h
     if(reduce){bm=tgt}else{bv+=(tgt-bm)*.085;bv*=.8;bm+=bv}
     if(tgt&&!was){shake=1;buzz([40,30,70]);if(typeof boomSound==='function')boomSound()}was=tgt;shake*=.9;
     wheel.rotation.z=-un*5.5-op*1.2;bolts.forEach(function(bo){var rr=OR+.2-un*.42;bo.position.x=Math.cos(bo.userData.a)*rr;bo.position.y=Math.sin(bo.userData.a)*rr});
-    hinge.rotation.y=op*2.05;glowM.opacity=op*.95;glow.scale.setScalar(.6+op*.5+bm*.25);lamp.intensity=op*3.2;
+    hinge.rotation.y=op*2.05;
     hint.textContent=p<.09?'Scroll to open the vault':p<.26?'Keep going':'Tap a photo to open it. The archive is below.';
     var fq=ease((p-.42)/.58),tz=z0-fq*(z0-.6);cz2+=(tz-cz2)*(reduce?1:.09);
     var sx=(Math.random()-.5)*shake*.25,sy=(Math.random()-.5)*shake*.25,k=nar?.5:1;
@@ -1053,7 +1052,7 @@ function studio(R,scene){var c=document.createElement('canvas');c.width=1024;c.h
       m.position.set(u.ex*kx*e+Math.sin(t*.5+i)*.08*e,u.ey*(nar?1.5:1)*e+Math.cos(t*.4+i*1.7)*.1*e,-1.2+(u.ez+1.2)*e);
       m.rotation.set((1-Math.min(1,e))*4,u.ry*e+(1-Math.min(1,e))*6,u.rz*e+(1-Math.min(1,e))*9);m.scale.setScalar((nar?.42:.66)*Math.max(.001,Math.min(1.1,e)));
       var d=cz2-m.position.z;m.visible=e>.02&&d>.5;m.material.opacity=Math.max(0,Math.min(1,(d-.8)/2))});
-    glowM.opacity=Math.min(1,op*.95+fq*.6);glow.scale.setScalar(.6+op*.5+bm*.25+fq*2.5);
+    glowM.opacity=op*.55*(1-fq*.85);glow.scale.setScalar(.55+op*.35+bm*.2);lamp.intensity=op*2.2*(1-fq*.7);
     R.render(scene,cam)})(t0);
 })();
 
