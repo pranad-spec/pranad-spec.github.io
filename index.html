@@ -682,6 +682,13 @@ html.pt-on .pname span{opacity:0}
 var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 var fine = matchMedia('(hover:hover) and (pointer:fine)').matches;
 var $ = function(id){return document.getElementById(id)};
+/* haptics: short vibrations on taps, where the phone allows it */
+function buzz(p){try{if(navigator.vibrate)navigator.vibrate(p)}catch(e){}}
+document.addEventListener('click',function(e){var t=e.target.closest&&e.target;if(!t||!t.closest)return;
+  if(t.closest('.shutter'))buzz([14,35,22]);
+  else if(t.closest('.can'))buzz([10,25,14]);
+  else if(t.closest('.shot,.tile,.panel'))buzz(12);
+  else if(t.closest('.look,.chip,.round,.pill,.pname'))buzz(8)},true);
 
 /* ---------- viewer ---------- */
 var shots=[].slice.call(document.querySelectorAll('.shot'));
@@ -872,7 +879,7 @@ function studio(R,scene){var c=document.createElement('canvas');c.width=1024;c.h
   host.addEventListener('pointerdown',function(e){drag=true;px=e.clientX;py=e.clientY;moved=0;host.classList.add('drag')});
   addEventListener('pointermove',function(e){var r=host.getBoundingClientRect();mx=(e.clientX-r.left)/r.width*2-1;my=(e.clientY-r.top)/r.height*2-1;
     if(!drag)return;var dx=e.clientX-px,dy=e.clientY-py;px=e.clientX;py=e.clientY;moved+=Math.abs(dx)+Math.abs(dy);vy=dx*.008;vx=dy*.004;ry+=vy;rx+=vx},{passive:true});
-  function up(){if(!drag)return;drag=false;host.classList.remove('drag');if(moved<8){kick=1;press=1;var f=$('flash3');f.classList.remove('go');void f.offsetWidth;f.classList.add('go')}}
+  function up(){if(!drag)return;drag=false;host.classList.remove('drag');if(moved<8){kick=1;press=1;buzz([14,35,22]);var f=$('flash3');f.classList.remove('go');void f.offsetWidth;f.classList.add('go')}}
   addEventListener('pointerup',up);addEventListener('pointercancel',function(){drag=false;host.classList.remove('drag')});
   new IntersectionObserver(function(e){vis=e[0].isIntersecting},{rootMargin:'80px'}).observe(host);
   var t0=performance.now();
@@ -902,7 +909,7 @@ function studio(R,scene){var c=document.createElement('canvas');c.width=1024;c.h
   pin.addEventListener('pointermove',function(e){var r=pin.getBoundingClientRect();mx=(e.clientX-r.left)/r.width*2-1;my=(e.clientY-r.top)/r.height*2-1},{passive:true});
   cv.addEventListener('pointerdown',function(e){dn=[e.clientX,e.clientY]});
   cv.addEventListener('pointerup',function(e){if(!dn||Math.abs(e.clientX-dn[0])+Math.abs(e.clientY-dn[1])>8)return;var r=cv.getBoundingClientRect();v2.set((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height*2-1));ray.setFromCamera(v2,cam);
-    var h=ray.intersectObjects(items).filter(function(x){return x.object.material.opacity>.3})[0];if(h)lbOpen(h.object.userData.s,null)});
+    var h=ray.intersectObjects(items).filter(function(x){return x.object.material.opacity>.3})[0];if(h){buzz(12);lbOpen(h.object.userData.s,null)}});
   (function loop(){requestAnimationFrame(loop);if(!vis||document.hidden)return;var r=sec.getBoundingClientRect(),p=Math.max(0,Math.min(1,-r.top/(r.height-innerHeight)));
     var tz=6-p*((items.length-1)*GAP+3);cz+=(tz-cz)*(reduce?1:.09);cam.position.set(mx*.5*k,-my*.3,cz);cam.rotation.set(-my*.03,-mx*.05,0);
     items.forEach(function(m){var d=cz-m.position.z;m.material.opacity=Math.max(0,Math.min(1,(d-.9)/2.2));m.visible=d>.6&&d<26;m.rotation.y=-m.userData.side*(.22+Math.max(0,1-d/7)*.25)});
@@ -1095,7 +1102,7 @@ if(fine){
   var ph0=$('phone'),auto=null,ks=Object.keys(F),ki=0,_set=set;set=function(k){_set(k);ph0.style.setProperty('--glow',G[k])};
   looks.forEach(function(b){b.onclick=function(){if(auto){clearInterval(auto);auto=null}set(b.dataset.k)}});set('RED');
   if(!reduce)auto=setInterval(function(){var r=ph0.getBoundingClientRect();if(r.bottom<0||r.top>innerHeight)return;ki=(ki+1)%ks.length;set(ks[ki])},2400);
-  var z=$('zoomR'),zo=$('zoomO');z.addEventListener('input',function(){view.style.setProperty('--z',z.value);zo.textContent=(+z.value).toFixed(1)+'x'});
+  var z=$('zoomR'),zo=$('zoomO');var zl=1;z.addEventListener('input',function(){var zs=Math.round(z.value*2);if(zs!==zl){zl=zs;buzz(5)}view.style.setProperty('--z',z.value);zo.textContent=(+z.value).toFixed(1)+'x'});
   var fl=$('flash');$('shutter').onclick=function(){fl.classList.remove('go');void fl.offsetWidth;fl.classList.add('go')};
   var ph=$('phone');
   if(fine&&!reduce){addEventListener('pointermove',function(e){var r=ph.getBoundingClientRect();if(r.bottom<0||r.top>innerHeight)return;
