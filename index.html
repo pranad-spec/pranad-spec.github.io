@@ -306,7 +306,7 @@ html.c3d .cans{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;
 .hero #blobs{pointer-events:none;z-index:1}
 
 /* ---- 3D camera ---- */
-.cam3d{position:relative;height:clamp(300px,44vw,580px);cursor:grab;touch-action:pan-y;display:none;user-select:none;-webkit-user-select:none}
+.cam3d{position:relative;height:clamp(340px,52vw,680px);cursor:grab;touch-action:pan-y;display:none;user-select:none;-webkit-user-select:none}
 html.cam-on .cam3d{display:block}
 .cam3d canvas{position:absolute;inset:0;width:100%;height:100%}
 .cam3d.drag{cursor:grabbing}
@@ -941,7 +941,7 @@ function studio(R,scene){var c=document.createElement('canvas');c.width=1024;c.h
   function plate(){tx2.clearRect(0,0,512,96);tx2.fillStyle='#111';tx2.font='500 54px "JetBrains Mono", monospace';tx2.textAlign='center';tx2.textBaseline='middle';tx2.fillText('P R A N A D',256,50)}
   plate();var pt=new THREE.CanvasTexture(tc),pl=new THREE.Mesh(new THREE.PlaneGeometry(.95,.18),new THREE.MeshBasicMaterial({map:pt,transparent:true}));pl.position.set(-1.02,.86,.535);G.add(pl);
   document.fonts&&document.fonts.load('500 54px "JetBrains Mono"').then(function(){plate();pt.needsUpdate=true});
-  var W=0,H=0;function layout(){W=host.clientWidth;H=host.clientHeight;if(!W||!H)return;R.setSize(W,H,false);cam.aspect=W/H;var v=cam.fov*Math.PI/180,z=Math.max(1.55/Math.tan(v/2),2.15/(Math.tan(v/2)*cam.aspect));cam.position.set(0,.15,z);cam.lookAt(0,.1,0);cam.updateProjectionMatrix()}
+  var W=0,H=0;function layout(){W=host.clientWidth;H=host.clientHeight;if(!W||!H)return;R.setSize(W,H,false);cam.aspect=W/H;var v=cam.fov*Math.PI/180,z=Math.max(2.15/Math.tan(v/2),2.3/(Math.tan(v/2)*cam.aspect))+.4;cam.position.set(0,.15,z);cam.lookAt(0,.1,0);cam.updateProjectionMatrix()}
   document.documentElement.classList.add('cam-on');layout();addEventListener('resize',layout);
   var vis=false,drag=false,px=0,py=0,moved=0,ry=0,rx=0,vy=0,vx=0,mx=0,my=0,kick=0,press=0;
   host.addEventListener('pointerdown',function(e){drag=true;px=e.clientX;py=e.clientY;moved=0;host.classList.add('drag')});
@@ -953,7 +953,7 @@ function studio(R,scene){var c=document.createElement('canvas');c.width=1024;c.h
   var t0=performance.now();
   (function loop(now){requestAnimationFrame(loop);if(!vis||document.hidden)return;var t=(now-t0)/1000;
     if(!drag){ry+=vy;rx+=vx;vy*=.95;vx*=.9;rx*=.94;if(!reduce)ry+=(Math.sin(t*.45)*.75-ry)*.012}
-    rx=Math.max(-.6,Math.min(.6,rx));kick*=.9;press*=.85;
+    rx=Math.max(-.4,Math.min(.4,rx));kick*=.9;press*=.85;
     G.rotation.y=ry;G.rotation.x=.1+rx+(reduce?0:Math.sin(t*.6)*.03);G.position.y=(reduce?0:Math.sin(t*.9)*.05)-kick*.08;G.scale.setScalar(1+kick*.04);
     btn.position.y=1.2-press*.06;L.rotation.y=Math.max(-.12,Math.min(.12,mx*.1));L.rotation.x=Math.max(-.1,Math.min(.1,my*.08));iris.scale.setScalar(1-press*.6);
     R.render(scene,cam)})(t0);
