@@ -209,7 +209,7 @@ section>.wrap,section>.stage,section>.ctrl,section>.strips{position:relative;z-i
 .shot img{transition:transform .9s cubic-bezier(.16,1,.3,1),opacity .8s ease,filter .5s}
 html.js .shot:not(.in) img{opacity:0;transform:scale(1.3)}
 .shot.in:hover img,.shot.in:focus-visible img{transform:scale(1.13)}
-@media (hover:hover){.grid:hover .shot{opacity:.38}.grid:hover .shot:hover{opacity:1;z-index:3}}
+@media (hover:hover){.grid .shot:hover{z-index:3}}
 .count{font-family:var(--serif);font-size:clamp(46px,9vw,128px);line-height:.9;color:var(--gold);font-style:italic}
 
 /* phone life */
@@ -364,6 +364,13 @@ canvas{outline:none}
 /* ---- hero name made of light ---- */
 #heroName{position:absolute;inset:0;width:100%;height:100%;z-index:2;pointer-events:none}
 html.hn-on .hero h1{color:transparent;text-shadow:none}
+
+/* ---- archive lens (Apple Watch style) ---- */
+html.lens .grid .shot{transform:translate3d(var(--tx,0px),var(--ty,0px),0) scale(var(--s,1)) perspective(900px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));transition:opacity .4s ease;border-radius:var(--br,6px);will-change:transform}
+html.lens .grid.measure .shot{transform:none!important}
+
+/* ---- light trail behind the cursor or finger ---- */
+.trail{position:fixed;inset:0;width:100%;height:100%;z-index:94;pointer-events:none}
 
 /* viewer */
 .lb{position:fixed;inset:0;z-index:80;background:#030303;display:none;grid-template-rows:auto 1fr auto;padding:12px}
@@ -1177,6 +1184,48 @@ if(fine&&!reduce){shots.forEach(function(s){
   });
   s.addEventListener('pointerleave',function(){s.style.setProperty('--ry','0deg');s.style.setProperty('--rx','0deg')});
 })}
+
+/* ---------- archive lens: photos swell near the focus and shrink away from it ---------- */
+(function(){
+  var grid=$('grid');if(!grid||reduce)return;document.documentElement.classList.add('lens');
+  var L=[],hov=false,px=innerWidth/2,py=innerHeight/2,fx=px,fy=py,need=true;
+  function relayout(){grid.classList.add('measure');var g=grid.getBoundingClientRect();
+    L=shots.map(function(s){if(s.hidden)return null;var r=s.getBoundingClientRect();return {el:s,cx:r.left-g.left+r.width/2,cy:r.top-g.top+r.height/2,s:1,tx:0,ty:0,fresh:true}}).filter(Boolean);
+    grid.classList.remove('measure');need=false}
+  if(window.ResizeObserver)new ResizeObserver(function(){need=true}).observe(grid);
+  addEventListener('resize',function(){need=true});
+  [].forEach.call(document.querySelectorAll('#sheet .filters'),function(f){f.addEventListener('click',function(){need=true})});
+  grid.addEventListener('pointerenter',function(e){if(e.pointerType!=='touch')hov=true});
+  grid.addEventListener('pointerleave',function(){hov=false});
+  addEventListener('pointermove',function(e){if(e.pointerType!=='touch'){px=e.clientX;py=e.clientY}},{passive:true});
+  (function loop(){requestAnimationFrame(loop);var g=grid.getBoundingClientRect();if(g.bottom<-200||g.top>innerHeight+200)return;if(need)relayout();
+    var tx=hov?px:innerWidth/2,ty=hov?py:innerHeight*.5;fx+=(tx-fx)*.12;fy+=(ty-fy)*.12;
+    var gx=fx-g.left,gy=fy-g.top,R=fine?440:Math.min(innerWidth,innerHeight)*.72,MIN=.64,top=-g.top-260,bot=innerHeight-g.top+260;
+    for(var i=0;i<L.length;i++){var o=L[i];if(o.cy<top||o.cy>bot){o.fresh=true;continue}
+      var dx=o.cx-gx,dy=o.cy-gy,f=Math.exp(-(dx*dx+dy*dy)/(R*R)),s=MIN+(1-MIN)*f,k=(1-s)*.32,ttx=-dx*k,tty=-dy*k;
+      if(o.fresh){o.s=s;o.tx=ttx;o.ty=tty;o.fresh=false}else{o.s+=(s-o.s)*.16;o.tx+=(ttx-o.tx)*.16;o.ty+=(tty-o.ty)*.16}
+      var st=o.el.style;st.setProperty('--s',o.s.toFixed(4));st.setProperty('--tx',o.tx.toFixed(1)+'px');st.setProperty('--ty',o.ty.toFixed(1)+'px');st.setProperty('--br',(6+(1-o.s)*48).toFixed(1)+'px')}
+  })();
+})();
+
+/* ---------- light trail behind the cursor or finger ---------- */
+(function(){
+  if(reduce)return;var c=document.createElement('canvas');c.className='trail';c.setAttribute('aria-hidden','true');document.body.appendChild(c);
+  var x=c.getContext('2d'),P=[],W=0,H=0,run=false,lx=null,ly=null;
+  function size(){var d=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;c.width=Math.round(W*d);c.height=Math.round(H*d);x.setTransform(d,0,0,d,0,0)}
+  size();addEventListener('resize',size);
+  function spawn(qx,qy){if(lx===null){lx=qx;ly=qy}var dx=qx-lx,dy=qy-ly,dist=Math.hypot(dx,dy),n=Math.min(9,Math.floor(dist/6)+1);
+    for(var i=0;i<n&&P.length<420;i++){var t=Math.random();P.push({x:lx+dx*t+(Math.random()-.5)*5,y:ly+dy*t+(Math.random()-.5)*5,vx:(Math.random()-.5)*.7+dx*.014,vy:(Math.random()-.5)*.7+dy*.014-.12,l:1,dl:.011+Math.random()*.02,r:.5+Math.random()*1.6})}
+    lx=qx;ly=qy;if(!run){run=true;requestAnimationFrame(tick)}}
+  addEventListener('pointermove',function(e){if(e.pointerType!=='touch')spawn(e.clientX,e.clientY)},{passive:true});
+  addEventListener('touchstart',function(e){var t=e.touches[0];if(t){lx=t.clientX;ly=t.clientY}},{passive:true});
+  addEventListener('touchmove',function(e){var t=e.touches[0];if(t)spawn(t.clientX,t.clientY)},{passive:true});
+  function tick(){x.clearRect(0,0,W,H);x.globalCompositeOperation='lighter';
+    for(var i=P.length-1;i>=0;i--){var p=P[i];p.x+=p.vx;p.y+=p.vy;p.vx*=.955;p.vy*=.955;p.l-=p.dl;if(p.l<=0){P.splice(i,1);continue}
+      var a=p.l*p.l;x.fillStyle='rgba(222,234,255,'+(a*.9).toFixed(3)+')';x.beginPath();x.arc(p.x,p.y,p.r*(.55+p.l*.6),0,6.2832);x.fill();
+      if(p.r>1.4){x.fillStyle='rgba(200,218,255,'+(a*.1).toFixed(3)+')';x.beginPath();x.arc(p.x,p.y,p.r*4.5,0,6.2832);x.fill()}}
+    if(P.length)requestAnimationFrame(tick);else{run=false;x.clearRect(0,0,W,H)}}
+})();
 
 /* ---------- ink buttons + cursor ---------- */
 [].forEach.call(document.querySelectorAll('.pill'),function(p){p.addEventListener('pointermove',function(e){
